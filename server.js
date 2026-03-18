@@ -23,13 +23,25 @@ const app = express()
 app.use(express.json())
 app.use(express.static(path.join(__dirname, "public")))
 
-// Uses Atlas URL in production (Railway), local MongoDB on your Mac
 const MONGO_URL = process.env.MONGO_URL || "mongodb://127.0.0.1:27017/jetapp"
 
 mongoose.connect(MONGO_URL)
   .then(() => console.log("MongoDB connected"))
   .catch(err => console.error("MongoDB error:", err))
 
+// ── ADMIN PASSWORD ─────────────────────────────────────────────────────
+// Change ADMIN_PASSWORD in your Railway environment variables
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "jetadmin123"
+
+function checkAdmin(req, res, next) {
+  const pwd = req.headers["x-admin-password"]
+  if (pwd !== ADMIN_PASSWORD) {
+    return res.status(401).json({ error: "Wrong password" })
+  }
+  next()
+}
+
+// ── DISTANCE ───────────────────────────────────────────────────────────
 function haversineDistance(lat1, lon1, lat2, lon2) {
   const R = 3440
   const dLat = (lat2 - lat1) * Math.PI / 180
@@ -43,78 +55,105 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
   return R * c
 }
 
+// ── PUBLIC ROUTES ──────────────────────────────────────────────────────
 app.get("/airports", (req, res) => {
   const list = []
   Object.keys(airports).forEach(code => {
-    list.push({
-      iata: code,
-      lat: airports[code].lat,
-      lon: airports[code].lon
-    })
+    list.push({ iata: code, lat: airports[code].lat, lon: airports[code].lon })
   })
   res.json(list)
 })
 
 app.get("/mission", async (req, res) => {
   const { from, to, passengers } = req.query
-
   const a1 = airports[from]
   const a2 = airports[to]
 
-  if (!a1 || !a2) {
-    return res.json({ error: "Airport not found. Check the IATA code." })
-  }
+  if (!a1 || !a2) return res.json({ error: "Airport not found" })
 
   const baseDistance = haversineDistance(a1.lat, a1.lon, a2.lat, a2.lon)
   const windDistance = applyWind(baseDistance, a1.lon, a2.lon)
-
   const aircraftList = await Aircraft.find({})
   const results = []
 
   aircraftList.forEach(jet => {
     const pax = Number(passengers)
     const adjustedRange = adjustRangeForPayload(jet.range, pax)
-
     let route = `${from} → ${to}`
     let stop = null
 
     if (windDistance > adjustedRange) {
       const fuelStop = findFuelStop(from, to, airports, adjustedRange)
-      if (!fuelStop) return   // skip this aircraft if no fuel stop exists
+      if (!fuelStop) return
       stop = fuelStop
       route = `${from} → ${fuelStop} → ${to}`
     }
 
     const cruise = jet.cruiseSpeed || 450
-    const burn   = jet.fuelBurn   || 400
-
-    const flightTime   = calculateFlightTime(windDistance, cruise)
-    const fuelUsed     = calculateFuelBurn(flightTime, burn)
-    const reserveFuel  = calculateReserveFuel(fuelUsed)
-    const totalFuel    = Math.round(fuelUsed + reserveFuel)  // FIXED: reserve now included
-    const fuelPrice    = fuelPrices[from] || 6.5
-    const tripCost     = totalFuel * fuelPrice               // cost based on total fuel with reserve
+    const burn = jet.fuelBurn || 400
+    const flightTime = calculateFlightTime(windDistance, cruise)
+    const fuelUsed = calculateFuelBurn(flightTime, burn)
+    const reserveFuel = calculateReserveFuel(fuelUsed)
+    const totalFuel = Math.round(fuelUsed + reserveFuel)
+    const fuelPrice = fuelPrices[from] || 6.5
+    const tripCost = totalFuel * fuelPrice
 
     results.push({
-      aircraft:        jet.name,
-      route:           route,
-      distanceNM:      Math.round(windDistance),
+      aircraft: jet.name,
+      route,
+      distanceNM: Math.round(windDistance),
       flightTimeHours: Number(flightTime.toFixed(2)),
       fuelUsedGallons: Math.round(fuelUsed),
       reserveFuelGallons: Math.round(reserveFuel),
       totalFuelGallons: totalFuel,
-      fuelCostUSD:     Math.round(tripCost),
-      fuelStop:        stop
+      fuelCostUSD: Math.round(tripCost),
+      fuelStop: stop
     })
   })
 
-  res.json({
-    route:    `${from} → ${to}`,
-    distance: Math.round(windDistance),
-    aircraft: results
-  })
+  res.json({ route: `${from} → ${to}`, distance: Math.round(windDistance), aircraft: results })
 })
 
+// ── ADMIN ROUTES (password protected) ─────────────────────────────────
+
+// Get all aircraft
+app.get("/admin/aircraft", checkAdmin, async (req, res) => {
+  const list = await Aircraft.find({}).sort({ name: 1 })
+  res.json(list)
+})
+
+// Add new aircraft
+app.post("/admin/aircraft", checkAdmin, async (req, res) => {
+  try {
+    const jet = new Aircraft(req.body)
+    await jet.save()
+    res.json({ success: true, aircraft: jet })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+// Update existing aircraft
+app.put("/admin/aircraft/:id", checkAdmin, async (req, res) => {
+  try {
+    const jet = await Aircraft.findByIdAndUpdate(req.params.id, req.body, { new: true })
+    res.json({ success: true, aircraft: jet })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+// Delete aircraft
+app.delete("/admin/aircraft/:id", checkAdmin, async (req, res) => {
+  try {
+    await Aircraft.findByIdAndDelete(req.params.id)
+    res.json({ success: true })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+// ── START ──────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5001
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`)
