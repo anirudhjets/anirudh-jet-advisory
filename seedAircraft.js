@@ -1,11 +1,14 @@
 const mongoose = require("mongoose")
 const Aircraft = require("./models/Aircraft")
 
-// FIXED: database name now matches server.js (jetapp, not jetdb)
-mongoose.connect("mongodb://127.0.0.1:27017/jetapp")
+// Reads Atlas URL from environment variable, falls back to local
+const MONGO_URL = process.env.MONGO_URL || "mongodb://127.0.0.1:27017/jetapp"
+
+mongoose.connect(MONGO_URL)
 
 .then(async () => {
 
+  console.log("Connected to:", MONGO_URL.includes("atlas") || MONGO_URL.includes("mongodb+srv") ? "Atlas (cloud)" : "Local")
   console.log("Seeding aircraft data...")
 
   await Aircraft.deleteMany({})
@@ -19,7 +22,7 @@ mongoose.connect("mongodb://127.0.0.1:27017/jetapp")
       range: 7000,
       age: 3,
       cruiseSpeed: 488,
-      fuelBurn: 450,       // gal/hr — realistic figure
+      fuelBurn: 450,
       maxPayload: 6500
     },
 
@@ -30,7 +33,7 @@ mongoose.connect("mongodb://127.0.0.1:27017/jetapp")
       range: 7700,
       age: 2,
       cruiseSpeed: 488,
-      fuelBurn: 500,       // gal/hr — realistic figure
+      fuelBurn: 500,
       maxPayload: 6500
     },
 
@@ -41,7 +44,7 @@ mongoose.connect("mongodb://127.0.0.1:27017/jetapp")
       range: 6450,
       age: 4,
       cruiseSpeed: 488,
-      fuelBurn: 420,       // gal/hr — realistic figure
+      fuelBurn: 420,
       maxPayload: 6000
     },
 
@@ -52,7 +55,7 @@ mongoose.connect("mongodb://127.0.0.1:27017/jetapp")
       range: 4000,
       age: 5,
       cruiseSpeed: 459,
-      fuelBurn: 370,       // gal/hr — realistic figure
+      fuelBurn: 370,
       maxPayload: 5000
     },
 
@@ -63,7 +66,7 @@ mongoose.connect("mongodb://127.0.0.1:27017/jetapp")
       range: 4018,
       age: 2,
       cruiseSpeed: 466,
-      fuelBurn: 300,       // gal/hr — realistic figure
+      fuelBurn: 300,
       maxPayload: 4500
     }
 
@@ -74,6 +77,6 @@ mongoose.connect("mongodb://127.0.0.1:27017/jetapp")
 
 })
 .catch(err => {
-  console.error("Seeding failed:", err)
-  mongoose.connection.close()
+  console.error("Connection failed:", err.message)
+  process.exit(1)
 })
