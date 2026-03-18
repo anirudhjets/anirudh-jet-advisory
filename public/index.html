@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Jet Mission Planner</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Share+Tech+Mono&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+  :root {
+    --bg:       #060b14;
+    --panel:    rgba(8, 15, 28, 0.92);
+    --border:   rgba(245, 176, 30, 0.18);
+    --amber:    #f5b01e;
+    --amber-dim:#a37510;
+    --cyan:     #00e5ff;
+    --text:     #dce8f0;
+    --muted:    #5a7080;
+    --card-bg:  rgba(255,255,255,0.03);
+    --card-hover: rgba(245,176,30,0.07);
+    --danger:   #ff4e4e;
+    --success:  #00e5a0;
+    --radius:   10px;
+    --font-display: 'Orbitron', monospace;
+    --font-data:    'Share Tech Mono', monospace;
+    --font-body:    'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── TOP BAR ── */
+  #topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 52px;
+    background: linear-gradient(90deg, #060b14 0%, #0b1626 100%);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    z-index: 1000;
+    gap: 20px;
+  }
+
+  #topbar .logo {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    color: var(--amber);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  #topbar .logo span { color: var(--cyan); }
+
+  .topbar-divider {
+    width: 1px;
+    height: 28px;
+    background: var(--border);
+  }
+
+  .route-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-data);
+    font-size: 14px;
+  }
+
+  .route-chip {
+    background: rgba(245,176,30,0.1);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 10px;
+    color: var(--amber);
+    letter-spacing: 0.12em;
+    min-width: 58px;
+    text-align: center;
+  }
+
+  .route-chip.empty { color: var(--muted); border-color: rgba(255,255,255,0.07); background: transparent; }
+
+  .route-arrow {
+    color: var(--muted);
+    font-size: 16px;
+  }
+
+  .topbar-spacer { flex: 1; }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 8px var(--success);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .status-label {
+    font-family: var(--font-data);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* ── MAP ── */
+  #map {
+    position: fixed;
+    top: 52px; left: 0; right: 0; bottom: 0;
+    z-index: 1;
+  }
+
+  /* ── LEFT PANEL ── */
+  #panel {
+    position: fixed;
+    top: 52px;
+    left: 0;
+    bottom: 0;
+    width: 340px;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── TABS ── */
+  #tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 13px 0;
+    text-align: center;
+    font-family: var(--font-display);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+
+  .tab:hover { color: var(--text); }
+
+  .tab.active {
+    color: var(--amber);
+    border-bottom-color: var(--amber);
+  }
+
+  /* ── PANEL CONTENT ── */
+  .panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 16px;
+    display: none;
+  }
+
+  .panel-content.active { display: block; }
+
+  .panel-content::-webkit-scrollbar { width: 4px; }
+  .panel-content::-webkit-scrollbar-track { background: transparent; }
+  .panel-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── SECTION LABEL ── */
+  .section-label {
+    font-family: var(--font-display);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    margin-top: 18px;
+  }
+
+  .section-label:first-child { margin-top: 0; }
+
+  /* ── FIELD ── */
+  .field {
+    margin-bottom: 10px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    margin-bottom: 5px;
+    font-family: var(--font-data);
+    text-transform: uppercase;
+  }
+
+  .field input {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-data);
+    font-size: 14px;
+    padding: 9px 12px;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .field input:focus {
+    border-color: var(--amber);
+    background: rgba(245,176,30,0.05);
+  }
+
+  /* ── BUTTON ── */
+  .btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    margin-top: 14px;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #c98f10 0%, var(--amber) 100%);
+    color: #060b14;
+    font-weight: 800;
+    box-shadow: 0 0 24px rgba(245,176,30,0.25);
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 0 36px rgba(245,176,30,0.45);
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    background: rgba(255,255,255,0.05);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover {
+    background: rgba(245,176,30,0.1);
+    border-color: var(--amber-dim);
+  }
+
+  /* ── AIRPORT SELECT HINT ── */
+  .hint-box {
+    background: rgba(0,229,255,0.05);
+    border: 1px solid rgba(0,229,255,0.15);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--cyan);
+    line-height: 1.5;
+    margin-bottom: 14px;
+    font-family: var(--font-data);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── AIRCRAFT RESULT CARDS ── */
+  .jet-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .jet-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--amber);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .jet-card:hover {
+    background: var(--card-hover);
+    border-color: var(--amber-dim);
+    transform: translateX(3px);
+  }
+
+  .jet-card:hover::before { opacity: 1; }
+
+  .jet-card.selected {
+    background: rgba(245,176,30,0.08);
+    border-color: var(--amber);
+  }
+
+  .jet-card.selected::before { opacity: 1; }
+
+  .jet-name {
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--amber);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .jet-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .stat {
+    background: rgba(255,255,255,0.03);
+    border-radius: 6px;
+    padding: 7px 9px;
+  }
+
+  .stat-label {
+    font-size: 9px;
+    color: var(--muted);
+    font-family: var(--font-data);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 2px;
+  }
+
+  .stat-value {
+    font-size: 13px;
+    color: var(--text);
+    font-family: var(--font-data);
+  }
+
+  .stat-value.highlight { color: var(--amber); }
+
+  .fuel-stop-badge {
+    display: inline-block;
+    margin-top: 8px;
+    background: rgba(255,78,78,0.1);
+    border: 1px solid rgba(255,78,78,0.25);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 10px;
+    color: var(--danger);
+    font-family: var(--font-data);
+    letter-spacing: 0.08em;
+  }
+
+  .no-stop-badge {
+    background: rgba(0,229,160,0.08);
+    border-color: rgba(0,229,160,0.2);
+    color: var(--success);
+  }
+
+  /* ── COST RESULTS ── */
+  .cost-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 13px;
+  }
+
+  .cost-row:last-child { border-bottom: none; }
+
+  .cost-label { color: var(--muted); font-family: var(--font-data); font-size: 11px; letter-spacing: 0.05em; }
+  .cost-value { font-family: var(--font-data); font-size: 14px; color: var(--text); }
+  .cost-value.amber { color: var(--amber); }
+  .cost-value.green { color: var(--success); }
+
+  .cost-summary {
+    background: rgba(245,176,30,0.07);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-top: 14px;
+  }
+
+  .cost-summary .big {
+    font-family: var(--font-display);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .cost-summary .verdict {
+    font-family: var(--font-data);
+    font-size: 14px;
+    color: var(--success);
+  }
+
+  /* ── MAP OVERLAYS ── */
+  .leaflet-container { background: #060b14 !important; }
+
+  /* click instructions on map */
+  #mapHint {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(6,11,20,0.85);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+    border-radius: 30px;
+    padding: 9px 20px;
+    font-family: var(--font-data);
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    z-index: 600;
+    pointer-events: none;
+    transition: opacity 0.4s;
+  }
+
+  #mapHint span { color: var(--amber); }
+
+  /* ── LOADING SPINNER ── */
+  #loader {
+    position: fixed;
+    top: 52px; left: 340px; right: 0; bottom: 0;
+    background: rgba(6,11,20,0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 700;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  #loader.visible { opacity: 1; pointer-events: all; }
+
+  .spinner {
+    width: 48px; height: 48px;
+    border: 2px solid rgba(245,176,30,0.15);
+    border-top-color: var(--amber);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+  }
+
+  .empty-icon {
+    font-size: 36px;
+    margin-bottom: 14px;
+    opacity: 0.4;
+  }
+
+  .empty-state p {
+    font-size: 12px;
+    line-height: 1.6;
+    font-family: var(--font-data);
+    letter-spacing: 0.06em;
+  }
+
+  /* ── CUSTOM LEAFLET MARKERS ── */
+  .airport-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(245,176,30,0.6);
+    border: 1px solid rgba(245,176,30,0.9);
+    box-shadow: 0 0 6px rgba(245,176,30,0.4);
+    transition: transform 0.15s;
+  }
+
+  .airport-dot:hover {
+    transform: scale(1.8);
+    background: var(--amber);
+  }
+
+  .airport-dot.selected-from {
+    background: var(--cyan);
+    border-color: var(--cyan);
+    box-shadow: 0 0 10px var(--cyan);
+    transform: scale(1.8);
+  }
+
+  .airport-dot.selected-to {
+    background: var(--success);
+    border-color: var(--success);
+    box-shadow: 0 0 10px var(--success);
+    transform: scale(1.8);
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="logo">JET<span>MISSION</span> PLANNER</div>
+  <div class="topbar-divider"></div>
+  <div class="route-display">
+    <div class="route-chip empty" id="fromLabel">FROM</div>
+    <div class="route-arrow">→</div>
+    <div class="route-chip empty" id="toLabel">TO</div>
+  </div>
+  <div class="topbar-spacer"></div>
+  <div class="status-dot"></div>
+  <div class="status-label">Live</div>
+</div>
+
+<!-- MAP -->
+<div id="map"></div>
+
+<!-- MAP HINT -->
+<div id="mapHint">Click any airport to set <span>ORIGIN</span> &nbsp;·&nbsp; then <span>DESTINATION</span></div>
+
+<!-- LOADER -->
+<div id="loader"><div class="spinner"></div></div>
+
+<!-- SIDE PANEL -->
+<div id="panel">
+
+  <div id="tabs">
+    <div class="tab active" onclick="showTab('mission')">Mission</div>
+    <div class="tab" onclick="showTab('results')">Results</div>
+    <div class="tab" onclick="showTab('costs')">Cost</div>
+  </div>
+
+  <!-- MISSION TAB -->
+  <div class="panel-content active" id="tab-mission">
+
+    <div class="hint-box">
+      Click airports on the map to select origin and destination, then plan your mission.
+    </div>
+
+    <div class="section-label">Passenger Load</div>
+    <div class="field">
+      <label>Passengers</label>
+      <input id="pax" type="number" value="8" min="1" max="19"/>
+    </div>
+
+    <button class="btn btn-primary" onclick="runMission()">▶ &nbsp;Plan Mission</button>
+    <button class="btn btn-secondary" onclick="resetSelection()">↺ &nbsp;Reset Selection</button>
+
+  </div>
+
+  <!-- RESULTS TAB -->
+  <div class="panel-content" id="tab-results">
+    <div class="empty-state" id="resultsEmpty">
+      <div class="empty-icon">✈</div>
+      <p>No mission planned yet.<br/>Select airports and run a mission.</p>
+    </div>
+    <div id="resultsCards"></div>
+  </div>
+
+  <!-- COSTS TAB -->
+  <div class="panel-content" id="tab-costs">
+
+    <div class="section-label">Annual Parameters</div>
+
+    <div class="field">
+      <label>Annual Flight Hours</label>
+      <input id="hours" type="number" value="200"/>
+    </div>
+    <div class="field">
+      <label>Charter Rate ($/hr)</label>
+      <input id="charterRate" type="number" value="8000"/>
+    </div>
+
+    <div class="section-label">Ownership Costs</div>
+
+    <div class="field">
+      <label>Fuel Price ($/gal)</label>
+      <input id="fuelPrice" type="number" value="6.5" step="0.1"/>
+    </div>
+    <div class="field">
+      <label>Crew Cost ($/year)</label>
+      <input id="crewCost" type="number" value="400000"/>
+    </div>
+    <div class="field">
+      <label>Maintenance ($/year)</label>
+      <input id="maintenanceCost" type="number" value="300000"/>
+    </div>
+    <div class="field">
+      <label>Hangar ($/year)</label>
+      <input id="hangarCost" type="number" value="150000"/>
+    </div>
+    <div class="field">
+      <label>Insurance ($/year)</label>
+      <input id="insuranceCost" type="number" value="120000"/>
+    </div>
+
+    <button class="btn btn-primary" onclick="calculateCosts()">Calculate Comparison</button>
+
+    <div id="costResults"></div>
+
+  </div>
+
+</div><!-- /panel -->
+
+<script>
+// ── MAP INIT ──────────────────────────────────────────────────────────
+const map = L.map("map", { zoomControl: false }).setView([20, 0], 2);
+
+// Dark aviation tile
+L.tileLayer(
+  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+  { attribution: '© CartoDB', maxZoom: 19 }
+).addTo(map);
+
+// Move zoom controls to bottom-right clear of panel
+L.control.zoom({ position: "bottomright" }).addTo(map);
+
+// ── STATE ─────────────────────────────────────────────────────────────
+let airports = {};
+let fromAirport = null;
+let toAirport = null;
+let routeLines = [];
+let markerMap = {};
+let lastMissionResults = [];
+let selectedCardIndex = null;
+
+// ── TABS ──────────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.panel-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ── LOADER ────────────────────────────────────────────────────────────
+function setLoading(on) {
+  document.getElementById('loader').classList.toggle('visible', on);
+}
+
+// ── AIRPORTS ─────────────────────────────────────────────────────────
+async function loadAirports() {
+  try {
+    const res = await fetch("/airports");
+    const data = await res.json();
+
+    data.forEach(a => {
+      airports[a.iata] = a;
+
+      const icon = L.divIcon({
+        className: '',
+        html: '<div class="airport-dot"></div>',
+        iconSize: [8, 8],
+        iconAnchor: [4, 4]
+      });
+
+      const marker = L.marker([a.lat, a.lon], { icon }).addTo(map);
+      marker.on("click", () => selectAirport(a.iata));
+      marker._dotEl = null; // will be set after render
+      markerMap[a.iata] = marker;
+    });
+
+    document.getElementById('mapHint').style.opacity = '1';
+  } catch(e) {
+    console.warn("Airport load failed", e);
+  }
+}
+
+// ── AIRPORT SELECTION ─────────────────────────────────────────────────
+function updateMarkerStyle(code, cls) {
+  const m = markerMap[code];
+  if (!m) return;
+  const el = m.getElement();
+  if (!el) return;
+  const dot = el.querySelector('.airport-dot');
+  if (!dot) return;
+  dot.className = 'airport-dot ' + cls;
+}
+
+function selectAirport(code) {
+  if (!fromAirport) {
+    fromAirport = code;
+    document.getElementById("fromLabel").innerText = code;
+    document.getElementById("fromLabel").classList.remove('empty');
+    updateMarkerStyle(code, 'selected-from');
+    document.getElementById('mapHint').innerHTML =
+      `<span>${code}</span> set as origin &nbsp;·&nbsp; Now click <span>DESTINATION</span>`;
+    return;
+  }
+
+  if (!toAirport) {
+    if (code === fromAirport) return;
+    toAirport = code;
+    document.getElementById("toLabel").innerText = code;
+    document.getElementById("toLabel").classList.remove('empty');
+    updateMarkerStyle(code, 'selected-to');
+    document.getElementById('mapHint').innerHTML =
+      `Route: <span>${fromAirport}</span> → <span>${toAirport}</span> &nbsp;·&nbsp; Click <span>Plan Mission</span>`;
+    return;
+  }
+
+  // Reset and start over
+  resetSelection();
+  selectAirport(code);
+}
+
+function resetSelection() {
+  if (fromAirport) updateMarkerStyle(fromAirport, '');
+  if (toAirport)   updateMarkerStyle(toAirport, '');
+  fromAirport = null;
+  toAirport = null;
+  document.getElementById("fromLabel").innerText = "FROM";
+  document.getElementById("fromLabel").classList.add('empty');
+  document.getElementById("toLabel").innerText = "TO";
+  document.getElementById("toLabel").classList.add('empty');
+  clearRoutes();
+  document.getElementById('mapHint').innerHTML =
+    `Click any airport to set <span>ORIGIN</span> &nbsp;·&nbsp; then <span>DESTINATION</span>`;
+}
+
+// ── ROUTES ────────────────────────────────────────────────────────────
+function clearRoutes() {
+  routeLines.forEach(l => map.removeLayer(l));
+  routeLines = [];
+}
+
+function drawRoute(routeString, highlight) {
+  clearRoutes();
+  const parts = routeString.split(" → ");
+
+  for (let i = 0; i < parts.length - 1; i++) {
+    const a1 = airports[parts[i]];
+    const a2 = airports[parts[i + 1]];
+    if (!a1 || !a2) continue;
+
+    // Glow shadow line
+    const glow = L.polyline(
+      [[a1.lat, a1.lon], [a2.lat, a2.lon]],
+      { color: highlight ? "#f5b01e" : "#00e5ff", weight: 8, opacity: 0.1, dashArray: null }
+    ).addTo(map);
+
+    // Main line
+    const line = L.polyline(
+      [[a1.lat, a1.lon], [a2.lat, a2.lon]],
+      {
+        color: highlight ? "#f5b01e" : "#00e5ff",
+        weight: 2,
+        opacity: 0.9,
+        dashArray: i === 0 ? null : "6 4"
+      }
+    ).addTo(map);
+
+    routeLines.push(glow, line);
+  }
+
+  if (routeLines.length > 0) {
+    try { map.fitBounds(routeLines[routeLines.length - 1].getBounds(), { padding: [60, 60] }); }
+    catch(e) {}
+  }
+}
+
+// ── MISSION ───────────────────────────────────────────────────────────
+async function runMission() {
+  if (!fromAirport || !toAirport) {
+    alert("Select origin and destination airports on the map first.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const pax = document.getElementById("pax").value;
+    const res = await fetch(`/mission?from=${fromAirport}&to=${toAirport}&passengers=${pax}`);
+    const data = await res.json();
+
+    lastMissionResults = data.aircraft;
+    selectedCardIndex = null;
+
+    renderResults(data.aircraft);
+
+    if (data.aircraft.length > 0) {
+      drawRoute(data.aircraft[0].route, true);
+      selectedCardIndex = 0;
+      document.querySelectorAll('.jet-card')[0]?.classList.add('selected');
+    }
+
+    // Auto-switch to results tab
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel-content').forEach(t => t.classList.remove('active'));
+    document.querySelector('.tab:nth-child(2)').classList.add('active');
+    document.getElementById('tab-results').classList.add('active');
+
+  } catch(e) {
+    alert("Mission planning failed. Check your server connection.");
+    console.error(e);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderResults(jets) {
+  const empty = document.getElementById('resultsEmpty');
+  const cards = document.getElementById('resultsCards');
+
+  if (!jets || jets.length === 0) {
+    empty.style.display = 'block';
+    cards.innerHTML = '';
+    return;
+  }
+
+  empty.style.display = 'none';
+
+  cards.innerHTML = jets.map((jet, i) => `
+    <div class="jet-card" id="card-${i}" onclick="selectAircraft(${i})">
+      <div class="jet-name">✈ ${jet.aircraft}</div>
+      <div class="jet-stats">
+        <div class="stat">
+          <div class="stat-label">Distance</div>
+          <div class="stat-value">${jet.distanceNM} <small style="color:var(--muted);font-size:10px">nm</small></div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Flight Time</div>
+          <div class="stat-value">${jet.flightTimeHours} <small style="color:var(--muted);font-size:10px">hrs</small></div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Fuel Used</div>
+          <div class="stat-value">${Number(jet.fuelUsedGallons).toLocaleString()} <small style="color:var(--muted);font-size:10px">gal</small></div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Trip Fuel Cost</div>
+          <div class="stat-value highlight">$${Number(jet.fuelCostUSD).toLocaleString()}</div>
+        </div>
+      </div>
+      <div>
+        <span class="${jet.fuelStop ? 'fuel-stop-badge' : 'fuel-stop-badge no-stop-badge'}">
+          ${jet.fuelStop ? '⛽ Stop: ' + jet.fuelStop : '✓ Non-stop'}
+        </span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectAircraft(index) {
+  document.querySelectorAll('.jet-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('card-' + index)?.classList.add('selected');
+  selectedCardIndex = index;
+  drawRoute(lastMissionResults[index].route, true);
+}
+
+// ── COST CALCULATOR ───────────────────────────────────────────────────
+function calculateCosts() {
+  const hours        = Number(document.getElementById("hours").value);
+  const charterRate  = Number(document.getElementById("charterRate").value);
+  const fuelPrice    = Number(document.getElementById("fuelPrice").value);
+  const crew         = Number(document.getElementById("crewCost").value);
+  const maintenance  = Number(document.getElementById("maintenanceCost").value);
+  const hangar       = Number(document.getElementById("hangarCost").value);
+  const insurance    = Number(document.getElementById("insuranceCost").value);
+
+  const charterCost   = hours * charterRate;
+  const ownershipCost = crew + maintenance + hangar + insurance + (hours * 400 * fuelPrice);
+  const cheaper       = charterCost < ownershipCost ? "Charter" : "Ownership";
+  const diff          = Math.abs(charterCost - ownershipCost);
+
+  document.getElementById("costResults").innerHTML = `
+    <div style="margin-top:16px">
+      <div class="cost-row">
+        <span class="cost-label">Charter / Year</span>
+        <span class="cost-value">$${charterCost.toLocaleString()}</span>
+      </div>
+      <div class="cost-row">
+        <span class="cost-label">Ownership / Year</span>
+        <span class="cost-value">$${ownershipCost.toLocaleString()}</span>
+      </div>
+      <div class="cost-row">
+        <span class="cost-label">Charter 5-Year</span>
+        <span class="cost-value amber">$${(charterCost * 5).toLocaleString()}</span>
+      </div>
+      <div class="cost-row">
+        <span class="cost-label">Ownership 5-Year</span>
+        <span class="cost-value amber">$${(ownershipCost * 5).toLocaleString()}</span>
+      </div>
+    </div>
+    <div class="cost-summary">
+      <div class="big">Recommendation</div>
+      <div class="verdict">${cheaper} saves $${diff.toLocaleString()} / year at ${hours} hrs</div>
+    </div>
+  `;
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────
+loadAirports();
+</script>
+</body>
+</html>
