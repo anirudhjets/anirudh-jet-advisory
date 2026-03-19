@@ -4,405 +4,422 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Jet Mission Planner</title>
-
 <link rel="manifest" href="/manifest.json"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="JetMission"/>
 <meta name="theme-color" content="#f5b01e"/>
-
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Share+Tech+Mono&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <style>
-  :root {
-    --bg:#060b14;--panel:rgba(8,15,28,0.96);--border:rgba(245,176,30,0.18);
-    --amber:#f5b01e;--amber-dim:#a37510;--cyan:#00e5ff;--text:#dce8f0;
-    --muted:#5a7080;--card-bg:rgba(255,255,255,0.03);--card-hover:rgba(245,176,30,0.07);
-    --danger:#ff4e4e;--success:#00e5a0;--radius:10px;
-    --font-display:'Orbitron',monospace;--font-data:'Share Tech Mono',monospace;--font-body:'Inter',sans-serif;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:100vh;overflow:hidden}
-
-  /* ── TOP BAR ── */
-  #topbar{position:fixed;top:0;left:0;right:0;height:52px;background:linear-gradient(90deg,#060b14,#0b1626);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;z-index:1000;gap:12px}
-  #topbar .logo{font-family:var(--font-display);font-size:11px;font-weight:800;letter-spacing:0.18em;color:var(--amber);text-transform:uppercase;white-space:nowrap}
-  #topbar .logo span{color:var(--cyan)}
-  .topbar-divider{width:1px;height:26px;background:var(--border);flex-shrink:0}
-  .route-display{display:flex;align-items:center;gap:8px;font-family:var(--font-data);font-size:13px;min-width:0}
-  .route-chip{background:rgba(245,176,30,0.1);border:1px solid var(--border);border-radius:4px;padding:3px 8px;color:var(--amber);letter-spacing:0.1em;min-width:48px;text-align:center;font-size:12px;white-space:nowrap}
-  .route-chip.empty{color:var(--muted);border-color:rgba(255,255,255,0.07);background:transparent}
-  .route-arrow{color:var(--muted);font-size:14px;flex-shrink:0}
-  .topbar-spacer{flex:1}
-  .status-dot{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2s infinite;flex-shrink:0}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-  .status-label{font-family:var(--font-data);font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap}
-
-  /* ── PANEL TOGGLE BUTTON ── */
-  #panelToggle{
-    display:none;
-    align-items:center;justify-content:center;
-    width:36px;height:36px;
-    background:rgba(245,176,30,0.12);
-    border:1px solid var(--border);
-    border-radius:8px;
-    cursor:pointer;
-    flex-shrink:0;
-    font-size:16px;
-    color:var(--amber);
-  }
-
-  /* ── MAP ── */
-  #map{position:fixed;top:52px;left:0;right:0;bottom:0;z-index:1}
-  .leaflet-container{background:#060b14 !important}
-
-  /* ── SIDE PANEL ── */
-  #panel{
-    position:fixed;top:52px;left:0;bottom:0;
-    width:320px;
-    background:var(--panel);
-    border-right:1px solid var(--border);
-    backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
-    z-index:500;
-    display:flex;flex-direction:column;overflow:hidden;
-    transition:transform 0.3s ease;
-  }
-  #panel.collapsed{transform:translateX(-100%)}
-
-  /* ── TABS ── */
-  #tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
-  .tab{flex:1;padding:12px 0;text-align:center;font-family:var(--font-display);font-size:8.5px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:all 0.2s;border-bottom:2px solid transparent;margin-bottom:-1px}
-  .tab:hover{color:var(--text)}
-  .tab.active{color:var(--amber);border-bottom-color:var(--amber)}
-
-  .panel-content{flex:1;overflow-y:auto;padding:16px;display:none}
-  .panel-content.active{display:block}
-  .panel-content::-webkit-scrollbar{width:4px}
-  .panel-content::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-
-  .section-label{font-family:var(--font-display);font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;margin-top:18px}
-  .section-label:first-child{margin-top:0}
-
-  .field{margin-bottom:10px}
-  .field label{display:block;font-size:11px;color:var(--muted);letter-spacing:0.08em;margin-bottom:5px;font-family:var(--font-data);text-transform:uppercase}
-  .field input{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius);color:var(--text);font-family:var(--font-data);font-size:14px;padding:9px 12px;outline:none;transition:border-color 0.2s,background 0.2s}
-  .field input:focus{border-color:var(--amber);background:rgba(245,176,30,0.05)}
-
-  .btn{width:100%;padding:12px;border:none;border-radius:var(--radius);cursor:pointer;font-family:var(--font-display);font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;transition:all 0.2s;margin-top:12px}
-  .btn-primary{background:linear-gradient(135deg,#c98f10,var(--amber));color:#060b14;font-weight:800;box-shadow:0 0 22px rgba(245,176,30,0.22)}
-  .btn-primary:hover{box-shadow:0 0 34px rgba(245,176,30,0.42);transform:translateY(-1px)}
-  .btn-secondary{background:rgba(255,255,255,0.05);color:var(--text);border:1px solid var(--border)}
-  .btn-secondary:hover{background:rgba(245,176,30,0.1);border-color:var(--amber-dim)}
-
-  .hint-box{background:rgba(0,229,255,0.05);border:1px solid rgba(0,229,255,0.15);border-radius:var(--radius);padding:10px 12px;font-size:11px;color:var(--cyan);line-height:1.5;margin-bottom:12px;font-family:var(--font-data);letter-spacing:0.04em}
-
-  /* ── JET CARDS ── */
-  .jet-card{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius);padding:13px;margin-bottom:9px;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden}
-  .jet-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--amber);opacity:0;transition:opacity 0.2s}
-  .jet-card:hover{background:var(--card-hover);border-color:var(--amber-dim);transform:translateX(3px)}
-  .jet-card:hover::before{opacity:1}
-  .jet-card.selected{background:rgba(245,176,30,0.08);border-color:var(--amber)}
-  .jet-card.selected::before{opacity:1}
-  .jet-name{font-family:var(--font-display);font-size:10px;letter-spacing:0.12em;color:var(--amber);text-transform:uppercase;margin-bottom:9px}
-  .jet-stats{display:grid;grid-template-columns:1fr 1fr;gap:5px}
-  .stat{background:rgba(255,255,255,0.03);border-radius:6px;padding:6px 8px}
-  .stat-label{font-size:9px;color:var(--muted);font-family:var(--font-data);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px}
-  .stat-value{font-size:13px;color:var(--text);font-family:var(--font-data)}
-  .stat-value.highlight{color:var(--amber)}
-  .fuel-stop-badge{display:inline-block;margin-top:7px;background:rgba(255,78,78,0.1);border:1px solid rgba(255,78,78,0.25);border-radius:4px;padding:3px 8px;font-size:10px;color:var(--danger);font-family:var(--font-data);letter-spacing:0.08em}
-  .no-stop-badge{background:rgba(0,229,160,0.08);border-color:rgba(0,229,160,0.2);color:var(--success)}
-
-  /* ── COST ── */
-  .cost-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px}
-  .cost-row:last-child{border-bottom:none}
-  .cost-label{color:var(--muted);font-family:var(--font-data);font-size:11px;letter-spacing:0.05em}
-  .cost-value{font-family:var(--font-data);font-size:14px;color:var(--text)}
-  .cost-value.amber{color:var(--amber)}
-  .cost-summary{background:rgba(245,176,30,0.07);border:1px solid var(--border);border-radius:var(--radius);padding:13px;margin-top:12px}
-  .cost-summary .big{font-family:var(--font-display);font-size:9px;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;margin-bottom:5px}
-  .cost-summary .verdict{font-family:var(--font-data);font-size:14px;color:var(--success)}
-
-  /* ── MAP HINT ── */
-  #mapHint{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:rgba(6,11,20,0.88);border:1px solid var(--border);backdrop-filter:blur(10px);border-radius:30px;padding:8px 18px;font-family:var(--font-data);font-size:11px;color:var(--muted);letter-spacing:0.08em;z-index:600;pointer-events:none;white-space:nowrap}
-  #mapHint span{color:var(--amber)}
-
-  /* ── LOADER ── */
-  #loader{position:fixed;top:52px;left:0;right:0;bottom:0;background:rgba(6,11,20,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:700;opacity:0;pointer-events:none;transition:opacity 0.3s}
-  #loader.visible{opacity:1;pointer-events:all}
-  .spinner{width:44px;height:44px;border:2px solid rgba(245,176,30,0.15);border-top-color:var(--amber);border-radius:50%;animation:spin 0.8s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
-
-  /* ── EMPTY STATE ── */
-  .empty-state{text-align:center;padding:40px 16px;color:var(--muted)}
-  .empty-icon{font-size:32px;margin-bottom:12px;opacity:0.4}
-  .empty-state p{font-size:11px;line-height:1.7;font-family:var(--font-data);letter-spacing:0.06em}
-
-  /* ── AIRPORT DOTS ── */
-  .airport-dot{width:8px;height:8px;border-radius:50%;background:rgba(245,176,30,0.6);border:1px solid rgba(245,176,30,0.9);box-shadow:0 0 6px rgba(245,176,30,0.4);transition:transform 0.15s;cursor:pointer}
-  .airport-dot:hover{transform:scale(1.8);background:var(--amber)}
-  .airport-dot.selected-from{background:var(--cyan);border-color:var(--cyan);box-shadow:0 0 10px var(--cyan);transform:scale(2)}
-  .airport-dot.selected-to{background:var(--success);border-color:var(--success);box-shadow:0 0 10px var(--success);transform:scale(2)}
-
-  /* ── TOOLTIP ── */
-  .apt-tooltip{background:rgba(6,11,20,0.95) !important;border:1px solid rgba(245,176,30,0.3) !important;border-radius:6px !important;padding:5px 10px !important;box-shadow:0 4px 18px rgba(0,0,0,0.5) !important;white-space:nowrap;font-family:'Share Tech Mono',monospace}
-  .apt-tooltip::before{display:none !important}
-
-  /* ── MOBILE STYLES ── */
-  @media (max-width: 768px) {
-    #panelToggle { display:flex; }
-
-    #panel {
-      width: 100%;
-      top: 52px;
-      transform: translateX(-100%);
-    }
-
-    #panel.open {
-      transform: translateX(0);
-    }
-
-    #topbar .logo { font-size: 10px; letter-spacing: 0.12em; }
-    .route-chip { min-width: 40px; font-size: 11px; padding: 3px 6px; }
-
-    #loader { left: 0; }
-
-    /* Map hint moves up on mobile so it doesn't overlap bottom bar */
-    #mapHint { bottom: 20px; font-size: 10px; padding: 7px 14px; }
-  }
+:root{--bg:#060b14;--panel:rgba(8,15,28,0.96);--border:rgba(245,176,30,0.18);--amber:#f5b01e;--amber-dim:#a37510;--cyan:#00e5ff;--text:#dce8f0;--muted:#5a7080;--card-bg:rgba(255,255,255,0.03);--card-hover:rgba(245,176,30,0.07);--danger:#ff4e4e;--success:#00e5a0;--radius:10px;--font-hud:'Orbitron',monospace;--font-data:'Share Tech Mono',monospace;--font-body:'Inter',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:100vh;overflow:hidden}
+#loginScreen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center}
+.login-box{width:340px;max-width:90vw;background:rgba(8,15,28,0.98);border:1px solid var(--border);border-radius:16px;padding:36px 28px;text-align:center}
+.login-logo{font-family:var(--font-hud);font-size:18px;font-weight:800;letter-spacing:0.2em;color:var(--amber);margin-bottom:6px}
+.login-logo span{color:var(--cyan)}
+.login-sub{font-family:var(--font-data);font-size:11px;color:var(--muted);letter-spacing:0.1em;margin-bottom:28px;text-transform:uppercase}
+.lf{margin-bottom:14px;text-align:left}
+.lf label{display:block;font-family:var(--font-data);font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px}
+.lf input{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:var(--text);font-family:var(--font-data);font-size:14px;padding:11px 14px;outline:none;transition:border-color 0.2s}
+.lf input:focus{border-color:var(--amber)}
+.login-btn{width:100%;padding:13px;border:none;border-radius:8px;background:linear-gradient(135deg,#c98f10,var(--amber));color:#060b14;font-family:var(--font-hud);font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;margin-top:6px;transition:all 0.2s}
+.login-btn:hover{box-shadow:0 0 30px rgba(245,176,30,0.4)}
+.login-err{color:var(--danger);font-family:var(--font-data);font-size:12px;margin-top:12px;min-height:18px}
+#topbar{position:fixed;top:0;left:0;right:0;height:52px;background:linear-gradient(90deg,#060b14,#0b1626);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px;z-index:1000;gap:10px}
+.logo{font-family:var(--font-hud);font-size:11px;font-weight:800;letter-spacing:0.18em;color:var(--amber);white-space:nowrap}
+.logo span{color:var(--cyan)}
+.divider{width:1px;height:26px;background:var(--border);flex-shrink:0}
+.route-row{display:flex;align-items:center;gap:7px;font-family:var(--font-data);font-size:12px}
+.chip{background:rgba(245,176,30,0.1);border:1px solid var(--border);border-radius:4px;padding:3px 8px;color:var(--amber);letter-spacing:0.1em;min-width:46px;text-align:center;white-space:nowrap}
+.chip.empty{color:var(--muted);background:transparent;border-color:rgba(255,255,255,0.07)}
+.arrow-txt{color:var(--muted);font-size:13px;flex-shrink:0}
+.spacer{flex:1}
+.user-name{font-family:var(--font-data);font-size:10px;color:var(--muted);letter-spacing:0.08em;white-space:nowrap}
+.pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+#panelToggle{display:none;align-items:center;justify-content:center;width:34px;height:34px;background:rgba(245,176,30,0.1);border:1px solid var(--border);border-radius:8px;cursor:pointer;color:var(--amber);font-size:16px;flex-shrink:0}
+#logoutBtn{font-family:var(--font-data);font-size:10px;color:var(--muted);cursor:pointer;letter-spacing:0.06em;padding:4px 8px;border:1px solid var(--border);border-radius:4px;white-space:nowrap;flex-shrink:0}
+#logoutBtn:hover{color:var(--danger);border-color:var(--danger)}
+.admin-link{font-family:var(--font-data);font-size:10px;color:var(--amber);letter-spacing:0.06em;padding:4px 8px;border:1px solid var(--border);border-radius:4px;white-space:nowrap;flex-shrink:0;text-decoration:none}
+#map{position:fixed;top:52px;left:0;right:0;bottom:0;z-index:1}
+.leaflet-container{background:#060b14 !important}
+.plane-icon{font-size:12px;line-height:1;filter:drop-shadow(0 0 4px rgba(245,176,30,0.6));cursor:pointer;transition:transform 0.12s;user-select:none}
+.plane-icon:hover{transform:scale(1.5)}
+.plane-icon.from{filter:drop-shadow(0 0 6px #00e5ff);transform:scale(1.7)}
+.plane-icon.to{filter:drop-shadow(0 0 6px #00e5a0);transform:scale(1.7)}
+#panel{position:fixed;top:52px;left:0;bottom:0;width:320px;background:var(--panel);border-right:1px solid var(--border);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);z-index:500;display:flex;flex-direction:column;overflow:hidden;transition:transform 0.28s ease}
+#tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{flex:1;padding:11px 0;text-align:center;font-family:var(--font-hud);font-size:7.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:color 0.2s;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--amber);border-bottom-color:var(--amber)}
+.pane{flex:1;overflow-y:auto;padding:14px;display:none}
+.pane.active{display:block}
+.pane::-webkit-scrollbar{width:3px}
+.pane::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.sh{font-family:var(--font-hud);font-size:8.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
+.sh:first-child{margin-top:0}
+.hint{background:rgba(0,229,255,0.05);border:1px solid rgba(0,229,255,0.15);border-radius:var(--radius);padding:9px 12px;font-family:var(--font-data);font-size:11px;color:#7dd8e8;line-height:1.6;margin-bottom:12px;letter-spacing:0.04em}
+.field{margin-bottom:9px}
+.field label{display:block;font-family:var(--font-data);font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius);color:var(--text);font-family:var(--font-data);font-size:13px;padding:8px 11px;outline:none;transition:border-color 0.2s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--amber);background:rgba(245,176,30,0.05)}
+.field select option{background:#060b14}
+.field textarea{resize:vertical;min-height:70px}
+.btn{width:100%;padding:11px;border:none;border-radius:var(--radius);cursor:pointer;font-family:var(--font-hud);font-size:9px;letter-spacing:0.2em;text-transform:uppercase;transition:all 0.2s;margin-top:10px}
+.btn-primary{background:linear-gradient(135deg,#c98f10,var(--amber));color:#060b14;font-weight:800;box-shadow:0 0 20px rgba(245,176,30,0.2)}
+.btn-primary:hover{box-shadow:0 0 32px rgba(245,176,30,0.4);transform:translateY(-1px)}
+.btn-secondary{background:rgba(255,255,255,0.04);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:rgba(245,176,30,0.08);border-color:var(--amber-dim)}
+#jetSwiper{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;padding:4px 2px 12px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+#jetSwiper::-webkit-scrollbar{display:none}
+.jet-card{flex:0 0 88%;scroll-snap-align:start;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color 0.2s}
+.jet-card.active{border-color:var(--amber)}
+.jet-img{width:100%;height:130px;background:linear-gradient(135deg,#0d1a2e,#1a2a40);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.jet-img img{width:100%;height:100%;object-fit:cover}
+.jet-img-ph{font-size:44px;opacity:0.25}
+.jet-body{padding:11px}
+.jet-name{font-family:var(--font-hud);font-size:9.5px;letter-spacing:0.12em;color:var(--amber);text-transform:uppercase;margin-bottom:9px}
+.jet-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
+.stat{background:rgba(255,255,255,0.03);border-radius:6px;padding:6px 8px}
+.stat-lbl{font-size:9px;color:var(--muted);font-family:var(--font-data);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px}
+.stat-val{font-size:12px;color:var(--text);font-family:var(--font-data)}
+.stat-val.gold{color:var(--amber)}
+.badge-stop{display:inline-block;border-radius:4px;padding:3px 8px;font-family:var(--font-data);font-size:10px;letter-spacing:0.06em;background:rgba(255,78,78,0.09);border:1px solid rgba(255,78,78,0.25);color:var(--danger)}
+.badge-ok{background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.22);color:var(--success)}
+.swipe-hint{text-align:center;font-family:var(--font-data);font-size:10px;color:var(--muted);letter-spacing:0.06em;margin-top:2px}
+#pane-costs{padding-bottom:50px}
+.cost-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+.cost-row:last-child{border-bottom:none}
+.cost-lbl{font-family:var(--font-data);font-size:10px;color:var(--muted);letter-spacing:0.06em}
+.cost-val{font-family:var(--font-data);font-size:13px;color:var(--text)}
+.cost-val.gold{color:var(--amber)}
+.verdict-box{background:rgba(245,176,30,0.07);border:1px solid var(--border);border-radius:var(--radius);padding:13px;margin-top:12px}
+.verdict-box .vhead{font-family:var(--font-hud);font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:5px}
+.verdict-box .vtext{font-family:var(--font-data);font-size:13px;color:var(--success);line-height:1.5}
+.client-saved{background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.22);border-radius:var(--radius);padding:10px 12px;font-family:var(--font-data);font-size:11px;color:var(--success);margin-top:10px;display:none}
+.empty{text-align:center;padding:40px 16px;color:var(--muted)}
+.empty-icon{font-size:30px;opacity:0.3;margin-bottom:12px}
+.empty p{font-family:var(--font-data);font-size:11px;line-height:1.7;letter-spacing:0.06em}
+#mapHint{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(6,11,20,0.88);border:1px solid var(--border);backdrop-filter:blur(10px);border-radius:30px;padding:8px 18px;font-family:var(--font-data);font-size:11px;color:var(--muted);letter-spacing:0.08em;z-index:600;pointer-events:none;white-space:nowrap}
+#mapHint span{color:var(--amber)}
+#loader{position:fixed;top:52px;left:0;right:0;bottom:0;background:rgba(6,11,20,0.65);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:700;opacity:0;pointer-events:none;transition:opacity 0.25s}
+#loader.on{opacity:1;pointer-events:all}
+.spinner{width:44px;height:44px;border:2px solid rgba(245,176,30,0.15);border-top-color:var(--amber);border-radius:50%;animation:spin 0.75s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.apt-tip{background:rgba(6,11,20,0.95) !important;border:1px solid rgba(245,176,30,0.3) !important;border-radius:6px !important;padding:5px 10px !important;box-shadow:0 4px 18px rgba(0,0,0,0.5) !important;white-space:nowrap;font-family:'Share Tech Mono',monospace}
+.apt-tip::before{display:none !important}
+@media(max-width:768px){
+  #panelToggle{display:flex}
+  #panel{width:100%;transform:translateX(-100%)}
+  #panel.open{transform:translateX(0)}
+  .logo{font-size:10px}
+  .chip{min-width:38px;font-size:11px;padding:3px 6px}
+  #mapHint{font-size:10px;padding:7px 14px;bottom:18px}
+}
 </style>
 </head>
 <body>
 
-<!-- TOP BAR -->
-<div id="topbar">
-  <!-- Toggle button — only shows on mobile -->
-  <div id="panelToggle" onclick="togglePanel()" title="Toggle panel">☰</div>
-  <div class="logo">JET<span>MISSION</span></div>
-  <div class="topbar-divider"></div>
-  <div class="route-display">
-    <div class="route-chip empty" id="fromLabel">FROM</div>
-    <div class="route-arrow">→</div>
-    <div class="route-chip empty" id="toLabel">TO</div>
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">JET<span>MISSION</span></div>
+    <div class="login-sub">Anirudh Jet Advisory</div>
+    <div class="lf"><label>Username</label><input id="loginUser" type="text" placeholder="Enter username" autocapitalize="none" autocorrect="off"/></div>
+    <div class="lf"><label>Password</label><input id="loginPass" type="password" placeholder="Enter password"/></div>
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div class="login-err" id="loginErr"></div>
   </div>
-  <div class="topbar-spacer"></div>
-  <div class="status-dot"></div>
-  <div class="status-label">Live</div>
 </div>
 
-<!-- MAP -->
+<div id="topbar">
+  <div id="panelToggle" onclick="togglePanel()">☰</div>
+  <div class="logo">JET<span>MISSION</span></div>
+  <div class="divider"></div>
+  <div class="route-row">
+    <div class="chip empty" id="fromChip">FROM</div>
+    <div class="arrow-txt">→</div>
+    <div class="chip empty" id="toChip">TO</div>
+  </div>
+  <div class="spacer"></div>
+  <span class="user-name" id="userName"></span>
+  <a class="admin-link" id="adminLink" href="/admin.html" style="display:none">Admin</a>
+  <div id="logoutBtn" onclick="doLogout()">Sign out</div>
+  <div class="pulse-dot"></div>
+</div>
+
 <div id="map"></div>
-<div id="mapHint">Click any airport to set <span>ORIGIN</span> &nbsp;·&nbsp; then <span>DESTINATION</span></div>
+<div id="mapHint">Zoom in to see airports &nbsp;·&nbsp; <span>pinch to zoom</span></div>
 <div id="loader"><div class="spinner"></div></div>
 
-<!-- SIDE PANEL -->
 <div id="panel">
   <div id="tabs">
-    <div class="tab active" onclick="showTab('mission',this)">Mission</div>
-    <div class="tab"        onclick="showTab('results',this)">Results</div>
-    <div class="tab"        onclick="showTab('costs',this)">Cost</div>
+    <div class="tab active" onclick="openTab('mission',this)">Mission</div>
+    <div class="tab"        onclick="openTab('results',this)">Results</div>
+    <div class="tab"        onclick="openTab('costs',this)">Cost</div>
+    <div class="tab"        onclick="openTab('client',this)">Client</div>
   </div>
 
-  <!-- MISSION -->
-  <div class="panel-content active" id="tab-mission">
-    <div class="hint-box">Click airports on the map to set origin and destination, then plan your mission.</div>
-    <div class="section-label">Passenger Load</div>
-    <div class="field">
-      <label>Passengers</label>
-      <input id="pax" type="number" value="8" min="1" max="19"/>
+  <div class="pane active" id="pane-mission">
+    <div class="hint">Zoom in on the map and tap airport icons ✈ to set your route.</div>
+    <div class="sh">Passengers</div>
+    <div class="field"><label>Number of passengers</label><input id="pax" type="number" value="8" min="1" max="19"/></div>
+    <button class="btn btn-primary" onclick="runMission()">&#9654; &nbsp;Plan Mission</button>
+    <button class="btn btn-secondary" onclick="resetAll()">&#8634; &nbsp;Reset</button>
+  </div>
+
+  <div class="pane" id="pane-results">
+    <div class="empty" id="emptyResults"><div class="empty-icon">&#9992;</div><p>No mission planned yet.<br/>Select airports and run a mission.</p></div>
+    <div id="jetSwiper"></div>
+    <div class="swipe-hint" id="swipeHint" style="display:none">&#8592; Swipe to compare aircraft &#8594;</div>
+  </div>
+
+  <div class="pane" id="pane-costs">
+    <div class="sh">Annual Parameters</div>
+    <div class="field"><label>Annual Flight Hours</label><input id="hours" type="number" value="200"/></div>
+    <div class="field"><label>Charter Rate ($/hr)</label><input id="charterRate" type="number" value="8000"/></div>
+    <div class="sh">Ownership Costs</div>
+    <div class="field"><label>Fuel Price ($/gal)</label><input id="fuelPrice" type="number" value="6.5" step="0.1"/></div>
+    <div class="field"><label>Crew Cost ($/year)</label><input id="crewCost" type="number" value="400000"/></div>
+    <div class="field"><label>Maintenance ($/year)</label><input id="maintenanceCost" type="number" value="300000"/></div>
+    <div class="field"><label>Hangar ($/year)</label><input id="hangarCost" type="number" value="150000"/></div>
+    <div class="field"><label>Insurance ($/year)</label><input id="insuranceCost" type="number" value="120000"/></div>
+    <button class="btn btn-primary" onclick="calcCosts()">Calculate Comparison</button>
+    <div id="costOut"></div>
+  </div>
+
+  <div class="pane" id="pane-client">
+    <div class="sh">Save Client Details</div>
+    <div class="field"><label>Full Name *</label><input id="cName" type="text" placeholder="e.g. Rahul Mehta"/></div>
+    <div class="field"><label>Phone</label><input id="cPhone" type="tel" placeholder="+91 98765 43210"/></div>
+    <div class="field"><label>Email</label><input id="cEmail" type="email" placeholder="rahul@company.com"/></div>
+    <div class="field"><label>Company</label><input id="cCompany" type="text" placeholder="Company name"/></div>
+    <div class="field"><label>Preferred Aircraft</label><input id="cAircraft" type="text" placeholder="e.g. Gulfstream G650"/></div>
+    <div class="field"><label>Typical Route</label><input id="cRoute" type="text" placeholder="e.g. Mumbai to Dubai"/></div>
+    <div class="field"><label>Passengers</label><input id="cPax" type="number" placeholder="e.g. 8"/></div>
+    <div class="field"><label>Budget Range</label>
+      <select id="cBudget">
+        <option value="">Select range</option>
+        <option>Under $50,000</option>
+        <option>$50,000 - $100,000</option>
+        <option>$100,000 - $250,000</option>
+        <option>$250,000 - $500,000</option>
+        <option>Above $500,000</option>
+      </select>
     </div>
-    <button class="btn btn-primary"   onclick="runMission()">▶ &nbsp;Plan Mission</button>
-    <button class="btn btn-secondary" onclick="resetSelection()">↺ &nbsp;Reset Selection</button>
-  </div>
-
-  <!-- RESULTS -->
-  <div class="panel-content" id="tab-results">
-    <div class="empty-state" id="resultsEmpty">
-      <div class="empty-icon">✈</div>
-      <p>No mission planned yet.<br/>Select airports and run a mission.</p>
-    </div>
-    <div id="resultsCards"></div>
-  </div>
-
-  <!-- COSTS -->
-  <div class="panel-content" id="tab-costs">
-    <div class="section-label">Annual Parameters</div>
-    <div class="field"><label>Annual Flight Hours</label>   <input id="hours"           type="number" value="200"/></div>
-    <div class="field"><label>Charter Rate ($/hr)</label>  <input id="charterRate"     type="number" value="8000"/></div>
-    <div class="section-label">Ownership Costs</div>
-    <div class="field"><label>Fuel Price ($/gal)</label>   <input id="fuelPrice"       type="number" value="6.5" step="0.1"/></div>
-    <div class="field"><label>Crew Cost ($/year)</label>   <input id="crewCost"        type="number" value="400000"/></div>
-    <div class="field"><label>Maintenance ($/year)</label> <input id="maintenanceCost" type="number" value="300000"/></div>
-    <div class="field"><label>Hangar ($/year)</label>      <input id="hangarCost"      type="number" value="150000"/></div>
-    <div class="field"><label>Insurance ($/year)</label>   <input id="insuranceCost"   type="number" value="120000"/></div>
-    <button class="btn btn-primary" onclick="calculateCosts()">Calculate Comparison</button>
-    <div id="costResults"></div>
+    <div class="field"><label>Notes</label><textarea id="cNotes" placeholder="Any special requirements..."></textarea></div>
+    <button class="btn btn-primary" onclick="saveClient()">Save Client</button>
+    <div class="client-saved" id="clientSaved">Client saved successfully.</div>
   </div>
 </div>
 
 <script>
-// ── MAP ───────────────────────────────────────────────────────────────
-const map = L.map("map", { zoomControl: false }).setView([20, 0], 2);
-L.control.zoom({ position: "bottomright" }).addTo(map);
+let TOKEN=localStorage.getItem("jmp_token")||"",USER={}
+function hdr(){return{"Content-Type":"application/json","x-token":TOKEN}}
 
-const darkTile = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { attribution:"© CartoDB", maxZoom:19 });
-const osmTile  = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution:"© OpenStreetMap", maxZoom:19 });
-darkTile.addTo(map);
-darkTile.on("tileerror", () => { map.removeLayer(darkTile); osmTile.addTo(map); });
+async function doLogin(){
+  const u=document.getElementById("loginUser").value.trim(),p=document.getElementById("loginPass").value
+  const err=document.getElementById("loginErr");err.textContent=""
+  if(!u||!p){err.textContent="Enter username and password";return}
+  try{
+    const res=await fetch("/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u,password:p})})
+    const data=await res.json()
+    if(data.error){err.textContent=data.error;return}
+    TOKEN=data.token;USER={username:u,role:data.role,name:data.name}
+    localStorage.setItem("jmp_token",TOKEN)
+    document.getElementById("loginScreen").style.display="none"
+    onLoggedIn()
+  }catch(e){err.textContent="Connection error. Try again."}
+}
+document.getElementById("loginPass").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()})
+document.getElementById("loginUser").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()})
 
-// ── STATE ─────────────────────────────────────────────────────────────
-let airports={}, fromAirport=null, toAirport=null, routeLines=[], markerMap={}, lastMissionResults=[], selectedCardIndex=null;
-
-// ── PANEL TOGGLE (mobile) ─────────────────────────────────────────────
-function togglePanel() {
-  const panel = document.getElementById("panel");
-  panel.classList.toggle("open");
+async function doLogout(){
+  try{await fetch("/logout",{method:"POST",headers:hdr()})}catch(e){}
+  localStorage.removeItem("jmp_token");location.reload()
 }
 
-function closePanel() {
-  const panel = document.getElementById("panel");
-  if (window.innerWidth <= 768) panel.classList.remove("open");
+function onLoggedIn(){
+  document.getElementById("userName").textContent=USER.name||""
+  if(USER.role==="admin")document.getElementById("adminLink").style.display="inline"
+  loadAirports()
 }
 
-// ── TABS ──────────────────────────────────────────────────────────────
-function showTab(name, el) {
-  document.querySelectorAll(".panel-content").forEach(e => e.classList.remove("active"));
-  document.querySelectorAll(".tab").forEach(e => e.classList.remove("active"));
-  document.getElementById("tab-" + name).classList.add("active");
-  el.classList.add("active");
+async function checkAuth(){
+  if(!TOKEN)return
+  try{
+    const res=await fetch("/me",{headers:hdr()})
+    const data=await res.json()
+    if(data.error){TOKEN="";localStorage.removeItem("jmp_token");return}
+    USER=data
+    document.getElementById("loginScreen").style.display="none"
+    onLoggedIn()
+  }catch(e){}
+}
+checkAuth()
+
+const map=L.map("map",{zoomControl:false}).setView([20,0],2)
+L.control.zoom({position:"bottomright"}).addTo(map)
+const darkTile=L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{attribution:"© CartoDB",maxZoom:19})
+const osmTile=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap",maxZoom:19})
+darkTile.addTo(map)
+darkTile.on("tileerror",()=>{map.removeLayer(darkTile);osmTile.addTo(map)})
+
+let airports={},markerMap={},markersOnMap=false,fromCode=null,toCode=null,routeLines=[],missionData=[]
+const SHOW_ZOOM=4
+
+function openTab(name,el){
+  document.querySelectorAll(".pane").forEach(p=>p.classList.remove("active"))
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"))
+  document.getElementById("pane-"+name).classList.add("active");el.classList.add("active")
+}
+function togglePanel(){document.getElementById("panel").classList.toggle("open")}
+function closePanel(){if(window.innerWidth<=768)document.getElementById("panel").classList.remove("open")}
+function setLoader(on){document.getElementById("loader").classList.toggle("on",on)}
+
+async function loadAirports(){
+  try{
+    const res=await fetch("/airports",{headers:hdr()})
+    const data=await res.json()
+    data.forEach(a=>{
+      airports[a.iata]=a
+      const icon=L.divIcon({className:"",html:'<div class="plane-icon">&#9992;</div>',iconSize:[16,16],iconAnchor:[8,8]})
+      const m=L.marker([a.lat,a.lon],{icon})
+      m.bindTooltip('<span style="font-family:\'Share Tech Mono\',monospace;font-size:12px;color:#f5b01e;letter-spacing:0.1em">'+a.iata+'</span>',{permanent:false,direction:"top",offset:[0,-8],className:"apt-tip"})
+      m.on("click",()=>{pickAirport(a.iata);closePanel()})
+      markerMap[a.iata]=m
+    })
+    updateMarkers()
+    map.on("zoomend",updateMarkers)
+  }catch(e){console.warn("Airport load failed:",e)}
 }
 
-// ── LOADER ────────────────────────────────────────────────────────────
-function setLoading(on) { document.getElementById("loader").classList.toggle("visible", on); }
-
-// ── LOAD AIRPORTS ─────────────────────────────────────────────────────
-async function loadAirports() {
-  try {
-    const res  = await fetch("/airports");
-    const data = await res.json();
-    data.forEach(a => {
-      airports[a.iata] = a;
-      const icon = L.divIcon({ className:"", html:'<div class="airport-dot"></div>', iconSize:[8,8], iconAnchor:[4,4] });
-      const marker = L.marker([a.lat, a.lon], { icon }).addTo(map);
-      marker.bindTooltip(
-        '<span style="font-family:\'Share Tech Mono\',monospace;font-size:12px;color:#f5b01e;letter-spacing:0.1em">'+a.iata+'</span>',
-        { permanent:false, direction:"top", offset:[0,-6], className:"apt-tooltip" }
-      );
-      marker.on("click", () => { selectAirport(a.iata); closePanel(); });
-      markerMap[a.iata] = marker;
-    });
-  } catch(e) { console.warn("Airport load failed:", e); }
+function updateMarkers(){
+  const zoom=map.getZoom(),show=zoom>=SHOW_ZOOM
+  if(show&&!markersOnMap){Object.values(markerMap).forEach(m=>m.addTo(map));markersOnMap=true;setHint('Tap any &#9992; to set <span>ORIGIN</span> &nbsp;&#183;&nbsp; then <span>DESTINATION</span>')}
+  else if(!show&&markersOnMap){Object.values(markerMap).forEach(m=>map.removeLayer(m));markersOnMap=false;setHint('Zoom in to see airports &nbsp;&#183;&nbsp; <span>pinch to zoom</span>')}
+  if(fromCode&&markerMap[fromCode])markerMap[fromCode].addTo(map)
+  if(toCode&&markerMap[toCode])markerMap[toCode].addTo(map)
 }
 
-// ── MARKER STYLE ──────────────────────────────────────────────────────
-function updateMarkerStyle(code, cls) {
-  const m = markerMap[code]; if(!m) return;
-  const el = m.getElement(); if(!el) return;
-  const dot = el.querySelector(".airport-dot"); if(dot) dot.className = "airport-dot "+cls;
+function stylePlane(code,cls){const m=markerMap[code];if(!m)return;const el=m.getElement();if(!el)return;const p=el.querySelector(".plane-icon");if(p)p.className="plane-icon "+cls}
+
+function pickAirport(code){
+  if(!fromCode){fromCode=code;setChip("fromChip",code,false);stylePlane(code,"from");setHint('<span>'+code+'</span> set &nbsp;&#183;&nbsp; Now tap <span>DESTINATION</span>');return}
+  if(!toCode){if(code===fromCode)return;toCode=code;setChip("toChip",code,false);stylePlane(code,"to");setHint('Route: <span>'+fromCode+'</span> &#8594; <span>'+toCode+'</span> &nbsp;&#183;&nbsp; <span>Plan Mission</span>');return}
+  resetAll();pickAirport(code)
 }
 
-// ── SELECT AIRPORT ────────────────────────────────────────────────────
-function selectAirport(code) {
-  if (!fromAirport) {
-    fromAirport=code;
-    document.getElementById("fromLabel").innerText=code;
-    document.getElementById("fromLabel").classList.remove("empty");
-    updateMarkerStyle(code,"selected-from");
-    document.getElementById("mapHint").innerHTML='<span>'+code+'</span> set as origin &nbsp;·&nbsp; Now click <span>DESTINATION</span>';
-    return;
+function setChip(id,text,empty){const el=document.getElementById(id);el.textContent=text;el.classList.toggle("empty",empty)}
+function setHint(html){document.getElementById("mapHint").innerHTML=html}
+
+function resetAll(){
+  if(fromCode)stylePlane(fromCode,"");if(toCode)stylePlane(toCode,"")
+  fromCode=null;toCode=null
+  setChip("fromChip","FROM",true);setChip("toChip","TO",true)
+  clearRoutes();setHint('Zoom in to see airports &nbsp;&#183;&nbsp; <span>pinch to zoom</span>')
+}
+
+function clearRoutes(){routeLines.forEach(l=>map.removeLayer(l));routeLines=[]}
+
+function drawRoute(routeStr){
+  clearRoutes()
+  const parts=routeStr.split(" \u2192 ")
+  for(let i=0;i<parts.length-1;i++){
+    const a1=airports[parts[i]],a2=airports[parts[i+1]]
+    if(!a1||!a2)continue
+    const coords=[[a1.lat,a1.lon],[a2.lat,a2.lon]]
+    routeLines.push(L.polyline(coords,{color:"#f5b01e",weight:10,opacity:0.07}).addTo(map))
+    routeLines.push(L.polyline(coords,{color:"#f5b01e",weight:2,opacity:0.9,dashArray:i>0?"7 5":null}).addTo(map))
   }
-  if (!toAirport) {
-    if(code===fromAirport) return;
-    toAirport=code;
-    document.getElementById("toLabel").innerText=code;
-    document.getElementById("toLabel").classList.remove("empty");
-    updateMarkerStyle(code,"selected-to");
-    document.getElementById("mapHint").innerHTML='Route: <span>'+fromAirport+'</span> → <span>'+toAirport+'</span> &nbsp;·&nbsp; Click <span>Plan Mission</span>';
-    return;
-  }
-  resetSelection(); selectAirport(code);
+  if(routeLines.length>0){try{const pts=parts.filter(c=>airports[c]).map(c=>[airports[c].lat,airports[c].lon]);map.fitBounds(L.latLngBounds(pts),{padding:[70,70]})}catch(e){}}
 }
 
-function resetSelection() {
-  if(fromAirport) updateMarkerStyle(fromAirport,"");
-  if(toAirport)   updateMarkerStyle(toAirport,"");
-  fromAirport=null; toAirport=null;
-  document.getElementById("fromLabel").innerText="FROM"; document.getElementById("fromLabel").classList.add("empty");
-  document.getElementById("toLabel").innerText="TO";     document.getElementById("toLabel").classList.add("empty");
-  clearRoutes();
-  document.getElementById("mapHint").innerHTML='Click any airport to set <span>ORIGIN</span> &nbsp;·&nbsp; then <span>DESTINATION</span>';
+async function runMission(){
+  if(!fromCode||!toCode){alert("Select origin and destination airports first.");return}
+  setLoader(true)
+  try{
+    const pax=document.getElementById("pax").value
+    const res=await fetch("/mission?from="+fromCode+"&to="+toCode+"&passengers="+pax,{headers:hdr()})
+    const data=await res.json()
+    if(data.error){alert(data.error);return}
+    missionData=data.aircraft||[]
+    renderCards(missionData)
+    if(missionData.length>0)drawRoute(missionData[0].route)
+    document.querySelectorAll(".pane").forEach(p=>p.classList.remove("active"))
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"))
+    document.getElementById("pane-results").classList.add("active")
+    document.querySelectorAll(".tab")[1].classList.add("active")
+    if(window.innerWidth<=768)document.getElementById("panel").classList.add("open")
+  }catch(e){alert("Mission planning failed. Check your connection.")}
+  finally{setLoader(false)}
 }
 
-// ── ROUTES ────────────────────────────────────────────────────────────
-function clearRoutes() { routeLines.forEach(l=>map.removeLayer(l)); routeLines=[]; }
-
-function drawRoute(routeString) {
-  clearRoutes();
-  const parts = routeString.split(" → ");
-  for(let i=0;i<parts.length-1;i++) {
-    const a1=airports[parts[i]], a2=airports[parts[i+1]];
-    if(!a1||!a2) continue;
-    const coords=[[a1.lat,a1.lon],[a2.lat,a2.lon]];
-    routeLines.push(L.polyline(coords,{color:"#f5b01e",weight:10,opacity:0.08}).addTo(map));
-    routeLines.push(L.polyline(coords,{color:"#f5b01e",weight:2,opacity:0.9,dashArray:i>0?"6 4":null}).addTo(map));
-  }
-  if(routeLines.length>0) {
-    try { const pts=parts.filter(c=>airports[c]).map(c=>[airports[c].lat,airports[c].lon]); map.fitBounds(L.latLngBounds(pts),{padding:[70,70]}); } catch(e){}
-  }
+function renderCards(jets){
+  const empty=document.getElementById("emptyResults"),swiper=document.getElementById("jetSwiper"),hint=document.getElementById("swipeHint")
+  if(!jets||jets.length===0){empty.style.display="block";swiper.innerHTML="";hint.style.display="none";return}
+  empty.style.display="none";hint.style.display=jets.length>1?"block":"none"
+  swiper.innerHTML=jets.map((j,i)=>{
+    const imgHtml=j.imageUrl
+      ?'<img src="'+j.imageUrl+'" alt="'+j.aircraft+'" onerror="this.style.display=\'none\'">'
+      :'<div class="jet-img-ph">&#9992;</div>'
+    return '<div class="jet-card'+(i===0?' active':'')+'" id="jc-'+i+'" onclick="selectJet('+i+')">'
+      +'<div class="jet-img">'+imgHtml+'</div>'
+      +'<div class="jet-body">'
+      +'<div class="jet-name">'+j.aircraft+'</div>'
+      +'<div class="jet-grid">'
+      +'<div class="stat"><div class="stat-lbl">Distance</div><div class="stat-val">'+j.distanceNM+' <small style="color:var(--muted);font-size:9px">nm</small></div></div>'
+      +'<div class="stat"><div class="stat-lbl">Flight Time</div><div class="stat-val">'+j.flightTimeHours+' <small style="color:var(--muted);font-size:9px">hrs</small></div></div>'
+      +'<div class="stat"><div class="stat-lbl">Fuel Used</div><div class="stat-val">'+Number(j.fuelUsedGallons).toLocaleString()+' <small style="color:var(--muted);font-size:9px">gal</small></div></div>'
+      +'<div class="stat"><div class="stat-lbl">Trip Fuel Cost</div><div class="stat-val gold">$'+Number(j.fuelCostUSD).toLocaleString()+'</div></div>'
+      +'</div>'
+      +'<span class="'+(j.fuelStop?'badge-stop':'badge-ok')+'">'+(j.fuelStop?'Fuel stop: '+j.fuelStop:'Non-stop')+'</span>'
+      +'</div></div>'
+  }).join("")
 }
 
-// ── MISSION ───────────────────────────────────────────────────────────
-async function runMission() {
-  if(!fromAirport||!toAirport){alert("Select origin and destination airports on the map first.");return;}
-  setLoading(true);
-  try {
-    const pax=document.getElementById("pax").value;
-    const res=await fetch("/mission?from="+fromAirport+"&to="+toAirport+"&passengers="+pax);
-    const data=await res.json();
-    lastMissionResults=data.aircraft; selectedCardIndex=null;
-    renderResults(data.aircraft);
-    if(data.aircraft.length>0){drawRoute(data.aircraft[0].route);selectedCardIndex=0;document.querySelectorAll(".jet-card")[0]?.classList.add("selected");}
-    // Switch to results tab
-    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-    document.querySelectorAll(".panel-content").forEach(t=>t.classList.remove("active"));
-    document.querySelectorAll(".tab")[1].classList.add("active");
-    document.getElementById("tab-results").classList.add("active");
-    // On mobile open the panel to show results
-    if(window.innerWidth<=768) document.getElementById("panel").classList.add("open");
-  } catch(e){alert("Mission planning failed. Check your connection.");console.error(e);}
-  finally{setLoading(false);}
+function selectJet(i){
+  document.querySelectorAll(".jet-card").forEach(c=>c.classList.remove("active"))
+  document.getElementById("jc-"+i)?.classList.add("active")
+  if(missionData[i])drawRoute(missionData[i].route)
 }
 
-function renderResults(jets) {
-  const empty=document.getElementById("resultsEmpty"), cards=document.getElementById("resultsCards");
-  if(!jets||jets.length===0){empty.style.display="block";cards.innerHTML="";return;}
-  empty.style.display="none";
-  cards.innerHTML=jets.map((jet,i)=>'<div class="jet-card" id="card-'+i+'" onclick="selectAircraft('+i+')"><div class="jet-name">✈ '+jet.aircraft+'</div><div class="jet-stats"><div class="stat"><div class="stat-label">Distance</div><div class="stat-value">'+jet.distanceNM+' <small style="color:var(--muted);font-size:10px">nm</small></div></div><div class="stat"><div class="stat-label">Flight Time</div><div class="stat-value">'+jet.flightTimeHours+' <small style="color:var(--muted);font-size:10px">hrs</small></div></div><div class="stat"><div class="stat-label">Fuel Used</div><div class="stat-value">'+Number(jet.fuelUsedGallons).toLocaleString()+' <small style="color:var(--muted);font-size:10px">gal</small></div></div><div class="stat"><div class="stat-label">Trip Fuel Cost</div><div class="stat-value highlight">$'+Number(jet.fuelCostUSD).toLocaleString()+'</div></div></div><div><span class="'+(jet.fuelStop?'fuel-stop-badge':'fuel-stop-badge no-stop-badge')+'">'+(jet.fuelStop?'Fuel stop: '+jet.fuelStop:'Non-stop')+'</span></div></div>').join("");
+function calcCosts(){
+  const h=+document.getElementById("hours").value,cr=+document.getElementById("charterRate").value
+  const fp=+document.getElementById("fuelPrice").value,crew=+document.getElementById("crewCost").value
+  const m=+document.getElementById("maintenanceCost").value,hg=+document.getElementById("hangarCost").value
+  const ins=+document.getElementById("insuranceCost").value
+  const charter=h*cr,ownership=crew+m+hg+ins+(h*400*fp)
+  const winner=charter<ownership?"Charter":"Ownership",diff=Math.abs(charter-ownership)
+  document.getElementById("costOut").innerHTML=
+    '<div style="margin-top:14px">'
+    +'<div class="cost-row"><span class="cost-lbl">Charter / year</span><span class="cost-val">$'+charter.toLocaleString()+'</span></div>'
+    +'<div class="cost-row"><span class="cost-lbl">Ownership / year</span><span class="cost-val">$'+ownership.toLocaleString()+'</span></div>'
+    +'<div class="cost-row"><span class="cost-lbl">Charter over 5 years</span><span class="cost-val gold">$'+(charter*5).toLocaleString()+'</span></div>'
+    +'<div class="cost-row"><span class="cost-lbl">Ownership over 5 years</span><span class="cost-val gold">$'+(ownership*5).toLocaleString()+'</span></div>'
+    +'</div>'
+    +'<div class="verdict-box"><div class="vhead">Recommendation at '+h+' hrs/year</div>'
+    +'<div class="vtext">'+winner+' is cheaper by $'+diff.toLocaleString()+' per year</div></div>'
 }
 
-function selectAircraft(index) {
-  document.querySelectorAll(".jet-card").forEach(c=>c.classList.remove("selected"));
-  document.getElementById("card-"+index)?.classList.add("selected");
-  selectedCardIndex=index; drawRoute(lastMissionResults[index].route);
+async function saveClient(){
+  const name=document.getElementById("cName").value.trim()
+  if(!name){alert("Full name is required.");return}
+  const body={fullName:name,phone:document.getElementById("cPhone").value,email:document.getElementById("cEmail").value,company:document.getElementById("cCompany").value,preferredAircraft:document.getElementById("cAircraft").value,typicalRoute:document.getElementById("cRoute").value,passengers:+document.getElementById("cPax").value||null,budgetRange:document.getElementById("cBudget").value,notes:document.getElementById("cNotes").value}
+  try{
+    const res=await fetch("/clients",{method:"POST",headers:hdr(),body:JSON.stringify(body)})
+    const data=await res.json()
+    if(data.error){alert(data.error);return}
+    const saved=document.getElementById("clientSaved");saved.style.display="block";setTimeout(()=>saved.style.display="none",3000)
+    ;["cName","cPhone","cEmail","cCompany","cAircraft","cRoute","cPax","cNotes"].forEach(id=>document.getElementById(id).value="")
+    document.getElementById("cBudget").value=""
+  }catch(e){alert("Failed to save client.")}
 }
 
-// ── COST CALCULATOR ───────────────────────────────────────────────────
-function calculateCosts() {
-  const hours=+document.getElementById("hours").value, charterRate=+document.getElementById("charterRate").value;
-  const fuelPrice=+document.getElementById("fuelPrice").value, crew=+document.getElementById("crewCost").value;
-  const maint=+document.getElementById("maintenanceCost").value, hangar=+document.getElementById("hangarCost").value;
-  const insurance=+document.getElementById("insuranceCost").value;
-  const charter=hours*charterRate, ownership=crew+maint+hangar+insurance+(hours*400*fuelPrice);
-  const cheaper=charter<ownership?"Charter":"Ownership", diff=Math.abs(charter-ownership);
-  document.getElementById("costResults").innerHTML='<div style="margin-top:14px"><div class="cost-row"><span class="cost-label">Charter / Year</span><span class="cost-value">$'+charter.toLocaleString()+'</span></div><div class="cost-row"><span class="cost-label">Ownership / Year</span><span class="cost-value">$'+ownership.toLocaleString()+'</span></div><div class="cost-row"><span class="cost-label">Charter 5-Year</span><span class="cost-value amber">$'+(charter*5).toLocaleString()+'</span></div><div class="cost-row"><span class="cost-label">Ownership 5-Year</span><span class="cost-value amber">$'+(ownership*5).toLocaleString()+'</span></div></div><div class="cost-summary"><div class="big">Recommendation</div><div class="verdict">'+cheaper+' saves $'+diff.toLocaleString()+' / year at '+hours+' hrs</div></div>';
-}
-
-// ── SERVICE WORKER ────────────────────────────────────────────────────
-if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then(()=>console.log("PWA ready")).catch(e=>console.warn("SW:",e));}
-
-loadAirports();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("/sw.js").catch(()=>{})
 </script>
 </body>
 </html>

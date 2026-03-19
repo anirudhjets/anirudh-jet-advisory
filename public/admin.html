@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Admin — Jet Mission Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Share+Tech+Mono&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#060b14;--panel:rgba(8,15,28,0.96);--border:rgba(245,176,30,0.18);--amber:#f5b01e;--cyan:#00e5ff;--text:#dce8f0;--muted:#5a7080;--danger:#ff4e4e;--success:#00e5a0;--radius:10px;--font-hud:'Orbitron',monospace;--font-data:'Share Tech Mono',monospace;--font-body:'Inter',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh}
+#authCheck{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:var(--font-data);color:var(--muted);font-size:13px;letter-spacing:0.1em}
+#topbar{position:fixed;top:0;left:0;right:0;height:52px;background:linear-gradient(90deg,#060b14,#0b1626);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;z-index:100;gap:16px}
+.logo{font-family:var(--font-hud);font-size:12px;font-weight:800;letter-spacing:0.2em;color:var(--amber)}
+.logo span{color:var(--cyan)}
+.admin-badge{font-family:var(--font-data);font-size:9px;color:var(--amber);border:1px solid var(--border);border-radius:4px;padding:2px 8px;letter-spacing:0.12em;text-transform:uppercase}
+.spacer{flex:1}
+.back-link{font-family:var(--font-data);font-size:10px;color:var(--muted);text-decoration:none;letter-spacing:0.08em;padding:4px 10px;border:1px solid var(--border);border-radius:4px}
+.back-link:hover{color:var(--text);border-color:var(--muted)}
+.logout-btn{font-family:var(--font-data);font-size:10px;color:var(--muted);cursor:pointer;letter-spacing:0.06em;padding:4px 10px;border:1px solid var(--border);border-radius:4px}
+.logout-btn:hover{color:var(--danger);border-color:var(--danger)}
+.content{padding:80px 24px 40px;max-width:1100px;margin:0 auto}
+.sec-tabs{display:flex;gap:4px;margin-bottom:28px;border-bottom:1px solid var(--border);padding-bottom:0}
+.sec-tab{font-family:var(--font-hud);font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);cursor:pointer;padding:10px 18px;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color 0.2s}
+.sec-tab:hover{color:var(--text)}
+.sec-tab.active{color:var(--amber);border-bottom-color:var(--amber)}
+.sec{display:none}
+.sec.active{display:block}
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.sec-title{font-family:var(--font-hud);font-size:13px;letter-spacing:0.15em;color:var(--text);text-transform:uppercase}
+.add-btn{font-family:var(--font-hud);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;background:linear-gradient(135deg,#c98f10,var(--amber));color:#060b14;border:none;border-radius:8px;padding:9px 18px;cursor:pointer;font-weight:800}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:#0b1626;border:1px solid var(--border);border-radius:14px;padding:28px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto}
+.modal-title{font-family:var(--font-hud);font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--amber);margin-bottom:20px}
+.mfield{margin-bottom:12px}
+.mfield label{display:block;font-family:var(--font-data);font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px}
+.mfield input,.mfield select,.mfield textarea{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:var(--text);font-family:var(--font-data);font-size:13px;padding:9px 12px;outline:none;transition:border-color 0.2s}
+.mfield input:focus,.mfield select:focus,.mfield textarea:focus{border-color:var(--amber)}
+.mfield select option{background:#060b14}
+.mfield textarea{resize:vertical;min-height:80px}
+.modal-actions{display:flex;gap:10px;margin-top:18px}
+.modal-save{flex:1;padding:11px;border:none;border-radius:8px;background:linear-gradient(135deg,#c98f10,var(--amber));color:#060b14;font-family:var(--font-hud);font-size:9px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;cursor:pointer}
+.modal-cancel{flex:1;padding:11px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--muted);font-family:var(--font-hud);font-size:9px;letter-spacing:0.18em;text-transform:uppercase;cursor:pointer}
+.modal-cancel:hover{color:var(--text)}
+.modal-err{color:var(--danger);font-family:var(--font-data);font-size:11px;margin-top:10px;min-height:16px}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{font-family:var(--font-hud);font-size:8px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);padding:10px 12px;text-align:left;border-bottom:1px solid var(--border)}
+.tbl td{padding:11px 12px;border-bottom:1px solid rgba(255,255,255,0.04);font-family:var(--font-data);font-size:12px;color:var(--text);vertical-align:top}
+.tbl tr:hover td{background:rgba(255,255,255,0.02)}
+.tbl .gold{color:var(--amber)}
+.del-btn{font-family:var(--font-data);font-size:10px;color:var(--danger);cursor:pointer;padding:3px 8px;border:1px solid rgba(255,78,78,0.3);border-radius:4px;background:transparent;letter-spacing:0.06em}
+.del-btn:hover{background:rgba(255,78,78,0.1)}
+.edit-btn{font-family:var(--font-data);font-size:10px;color:var(--amber);cursor:pointer;padding:3px 8px;border:1px solid var(--border);border-radius:4px;background:transparent;letter-spacing:0.06em;margin-right:4px}
+.edit-btn:hover{background:rgba(245,176,30,0.08)}
+.role-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;letter-spacing:0.08em;text-transform:uppercase}
+.role-admin{background:rgba(245,176,30,0.12);color:var(--amber);border:1px solid rgba(245,176,30,0.3)}
+.role-emp{background:rgba(255,255,255,0.05);color:var(--muted);border:1px solid rgba(255,255,255,0.1)}
+.empty-tbl{text-align:center;padding:48px;color:var(--muted);font-family:var(--font-data);font-size:12px;letter-spacing:0.08em}
+.stat-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:28px}
+.stat-card{background:rgba(8,15,28,0.8);border:1px solid var(--border);border-radius:12px;padding:18px}
+.stat-card .label{font-family:var(--font-hud);font-size:8px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.stat-card .value{font-family:var(--font-data);font-size:24px;color:var(--amber)}
+.img-preview{width:60px;height:36px;object-fit:cover;border-radius:4px;border:1px solid var(--border)}
+@media(max-width:600px){.content{padding:70px 14px 40px}.sec-tab{padding:10px 12px;font-size:8px}.tbl th,.tbl td{padding:8px}.stat-cards{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div id="authCheck">Checking access...</div>
+<div id="topbar">
+  <div class="logo">JET<span>MISSION</span></div>
+  <div class="admin-badge">Admin</div>
+  <div class="spacer"></div>
+  <a class="back-link" href="/">Back to App</a>
+  <div class="logout-btn" onclick="doLogout()">Sign out</div>
+</div>
+<div class="content" id="mainContent" style="display:none">
+  <div class="stat-cards">
+    <div class="stat-card"><div class="label">Total Clients</div><div class="value" id="statClients">-</div></div>
+    <div class="stat-card"><div class="label">Aircraft Fleet</div><div class="value" id="statAircraft">-</div></div>
+    <div class="stat-card"><div class="label">Missions Planned</div><div class="value" id="statMissions">-</div></div>
+    <div class="stat-card"><div class="label">Employees</div><div class="value" id="statUsers">-</div></div>
+  </div>
+  <div class="sec-tabs">
+    <div class="sec-tab active" onclick="openSec('aircraft',this)">Aircraft</div>
+    <div class="sec-tab" onclick="openSec('clients',this)">Clients</div>
+    <div class="sec-tab" onclick="openSec('missions',this)">Mission History</div>
+    <div class="sec-tab" onclick="openSec('users',this)">Employees</div>
+  </div>
+  <div class="sec active" id="sec-aircraft">
+    <div class="sec-header"><div class="sec-title">Fleet Management</div><button class="add-btn" onclick="openAircraftModal()">+ Add Aircraft</button></div>
+    <table class="tbl"><thead><tr><th>Photo</th><th>Aircraft</th><th>Range</th><th>Speed</th><th>Fuel Burn</th><th>Pax</th><th>Actions</th></tr></thead><tbody id="aircraftTbl"></tbody></table>
+  </div>
+  <div class="sec" id="sec-clients">
+    <div class="sec-header"><div class="sec-title">Client Database</div></div>
+    <table class="tbl"><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Company</th><th>Route</th><th>Budget</th><th>Added By</th><th></th></tr></thead><tbody id="clientsTbl"></tbody></table>
+  </div>
+  <div class="sec" id="sec-missions">
+    <div class="sec-header"><div class="sec-title">Mission History</div></div>
+    <table class="tbl"><thead><tr><th>Date</th><th>By</th><th>Route</th><th>Distance</th><th>Pax</th></tr></thead><tbody id="missionsTbl"></tbody></table>
+  </div>
+  <div class="sec" id="sec-users">
+    <div class="sec-header"><div class="sec-title">Employees</div><button class="add-btn" onclick="openUserModal()">+ Add Employee</button></div>
+    <table class="tbl"><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Joined</th><th></th></tr></thead><tbody id="usersTbl"></tbody></table>
+  </div>
+</div>
+<div class="modal-overlay" id="aircraftModal">
+  <div class="modal">
+    <div class="modal-title" id="aircraftModalTitle">Add Aircraft</div>
+    <div class="mfield"><label>Aircraft Name *</label><input id="aName" type="text" placeholder="e.g. Gulfstream G650"/></div>
+    <div class="mfield"><label>Photo URL</label><input id="aImageUrl" type="text" placeholder="https://... paste image link"/></div>
+    <div class="mfield"><label>Range (nm)</label><input id="aRange" type="number" placeholder="e.g. 7000"/></div>
+    <div class="mfield"><label>Cruise Speed (knots)</label><input id="aSpeed" type="number" placeholder="e.g. 488"/></div>
+    <div class="mfield"><label>Fuel Burn (gal/hr)</label><input id="aFuelBurn" type="number" placeholder="e.g. 450"/></div>
+    <div class="mfield"><label>Max Passengers</label><input id="aPax" type="number" placeholder="e.g. 16"/></div>
+    <div class="mfield"><label>Price (million USD)</label><input id="aPrice" type="number" placeholder="e.g. 65"/></div>
+    <div class="modal-actions"><button class="modal-cancel" onclick="closeModal('aircraftModal')">Cancel</button><button class="modal-save" onclick="saveAircraft()">Save</button></div>
+    <div class="modal-err" id="aircraftErr"></div>
+  </div>
+</div>
+<div class="modal-overlay" id="userModal">
+  <div class="modal">
+    <div class="modal-title">Add Employee</div>
+    <div class="mfield"><label>Full Name *</label><input id="uName" type="text" placeholder="e.g. Priya Shah"/></div>
+    <div class="mfield"><label>Username *</label><input id="uUsername" type="text" placeholder="e.g. priya" autocapitalize="none"/></div>
+    <div class="mfield"><label>Password *</label><input id="uPassword" type="password" placeholder="Create a password"/></div>
+    <div class="mfield"><label>Role</label><select id="uRole"><option value="employee">Employee</option><option value="admin">Admin</option></select></div>
+    <div class="modal-actions"><button class="modal-cancel" onclick="closeModal('userModal')">Cancel</button><button class="modal-save" onclick="saveUser()">Add Employee</button></div>
+    <div class="modal-err" id="userErr"></div>
+  </div>
+</div>
+<script>
+let TOKEN=localStorage.getItem("jmp_token")||""
+function hdr(){return{"Content-Type":"application/json","x-token":TOKEN}}
+async function checkAuth(){
+  if(!TOKEN){window.location.href="/";return}
+  try{const res=await fetch("/me",{headers:hdr()});const data=await res.json();if(data.error||data.role!=="admin"){window.location.href="/";return}
+  document.getElementById("authCheck").style.display="none";document.getElementById("mainContent").style.display="block";loadAll()}catch(e){window.location.href="/"}
+}
+checkAuth()
+async function doLogout(){try{await fetch("/logout",{method:"POST",headers:hdr()})}catch(e){}localStorage.removeItem("jmp_token");window.location.href="/"}
+function openSec(name,el){document.querySelectorAll(".sec").forEach(s=>s.classList.remove("active"));document.querySelectorAll(".sec-tab").forEach(t=>t.classList.remove("active"));document.getElementById("sec-"+name).classList.add("active");el.classList.add("active")}
+function openModal(id){document.getElementById(id).classList.add("open")}
+function closeModal(id){document.getElementById(id).classList.remove("open")}
+async function loadAll(){await Promise.all([loadAircraft(),loadClients(),loadMissions(),loadUsers()])}
+let editAircraftId=null
+function openAircraftModal(jet){
+  editAircraftId=jet?jet._id:null
+  document.getElementById("aircraftModalTitle").textContent=jet?"Edit Aircraft":"Add Aircraft"
+  document.getElementById("aName").value=jet?.name||""
+  document.getElementById("aImageUrl").value=jet?.imageUrl||""
+  document.getElementById("aRange").value=jet?.range||""
+  document.getElementById("aSpeed").value=jet?.cruiseSpeed||""
+  document.getElementById("aFuelBurn").value=jet?.fuelBurn||""
+  document.getElementById("aPax").value=jet?.passengers||""
+  document.getElementById("aPrice").value=jet?.price||""
+  document.getElementById("aircraftErr").textContent=""
+  openModal("aircraftModal")
+}
+async function loadAircraft(){
+  try{const res=await fetch("/admin/aircraft",{headers:hdr()});const data=await res.json();document.getElementById("statAircraft").textContent=data.length;const tbl=document.getElementById("aircraftTbl");if(!data.length){tbl.innerHTML='<tr><td colspan="7" class="empty-tbl">No aircraft yet.</td></tr>';return}
+  tbl.innerHTML=data.map(j=>'<tr><td>'+(j.imageUrl?'<img class="img-preview" src="'+j.imageUrl+'" alt="" onerror="this.style.display=\'none\'">':'—')+'</td><td class="gold">'+j.name+'</td><td>'+(j.range?j.range.toLocaleString()+' nm':'—')+'</td><td>'+(j.cruiseSpeed||'—')+' kts</td><td>'+(j.fuelBurn||'—')+' gal/hr</td><td>'+(j.passengers||'—')+'</td><td><button class="edit-btn" onclick=\'openAircraftModal('+JSON.stringify(j).replace(/'/g,"&#39;")+')\'>Edit</button><button class="del-btn" onclick="deleteAircraft(\''+j._id+'\')">Delete</button></td></tr>').join("")}catch(e){console.error(e)}
+}
+async function saveAircraft(){
+  const name=document.getElementById("aName").value.trim();if(!name){document.getElementById("aircraftErr").textContent="Name required.";return}
+  const body={name,imageUrl:document.getElementById("aImageUrl").value.trim(),range:+document.getElementById("aRange").value||undefined,cruiseSpeed:+document.getElementById("aSpeed").value||undefined,fuelBurn:+document.getElementById("aFuelBurn").value||undefined,passengers:+document.getElementById("aPax").value||undefined,price:+document.getElementById("aPrice").value||undefined}
+  try{const url=editAircraftId?"/admin/aircraft/"+editAircraftId:"/admin/aircraft";const method=editAircraftId?"PUT":"POST";const res=await fetch(url,{method,headers:hdr(),body:JSON.stringify(body)});const data=await res.json();if(data.error){document.getElementById("aircraftErr").textContent=data.error;return}closeModal("aircraftModal");loadAircraft()}catch(e){document.getElementById("aircraftErr").textContent="Failed."}
+}
+async function deleteAircraft(id){if(!confirm("Delete this aircraft?"))return;try{await fetch("/admin/aircraft/"+id,{method:"DELETE",headers:hdr()});loadAircraft()}catch(e){alert("Failed.")}}
+async function loadClients(){
+  try{const res=await fetch("/clients",{headers:hdr()});const data=await res.json();document.getElementById("statClients").textContent=data.length;const tbl=document.getElementById("clientsTbl");if(!data.length){tbl.innerHTML='<tr><td colspan="8" class="empty-tbl">No clients saved yet.</td></tr>';return}
+  tbl.innerHTML=data.map(c=>'<tr><td class="gold">'+c.fullName+'</td><td>'+(c.phone||'—')+'</td><td>'+(c.email||'—')+'</td><td>'+(c.company||'—')+'</td><td>'+(c.typicalRoute||'—')+'</td><td>'+(c.budgetRange||'—')+'</td><td>'+(c.addedBy||'—')+'</td><td><button class="del-btn" onclick="deleteClient(\''+c._id+'\')">Delete</button></td></tr>').join("")}catch(e){console.error(e)}
+}
+async function deleteClient(id){if(!confirm("Delete client?"))return;try{await fetch("/clients/"+id,{method:"DELETE",headers:hdr()});loadClients()}catch(e){alert("Failed.")}}
+async function loadMissions(){
+  try{const res=await fetch("/admin/missions",{headers:hdr()});const data=await res.json();document.getElementById("statMissions").textContent=data.length;const tbl=document.getElementById("missionsTbl");if(!data.length){tbl.innerHTML='<tr><td colspan="5" class="empty-tbl">No missions yet.</td></tr>';return}
+  tbl.innerHTML=data.map(m=>'<tr><td>'+new Date(m.createdAt).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"})+'</td><td>'+(m.name||m.username)+'</td><td class="gold">'+m.from+' \u2192 '+m.to+'</td><td>'+(m.distanceNM?m.distanceNM.toLocaleString()+' nm':'—')+'</td><td>'+(m.passengers||'—')+'</td></tr>').join("")}catch(e){console.error(e)}
+}
+async function loadUsers(){
+  try{const res=await fetch("/admin/users",{headers:hdr()});const data=await res.json();document.getElementById("statUsers").textContent=data.length;const tbl=document.getElementById("usersTbl");if(!data.length){tbl.innerHTML='<tr><td colspan="5" class="empty-tbl">No employees.</td></tr>';return}
+  tbl.innerHTML=data.map(u=>'<tr><td>'+u.name+'</td><td class="gold">'+u.username+'</td><td><span class="role-badge '+(u.role==="admin"?"role-admin":"role-emp")+'">'+u.role+'</span></td><td>'+new Date(u.createdAt).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"})+'</td><td>'+(u.username!=="anirudh"?'<button class="del-btn" onclick="deleteUser(\''+u._id+'\')">Remove</button>':'<span style="color:var(--muted);font-size:11px">Owner</span>')+'</td></tr>').join("")}catch(e){console.error(e)}
+}
+function openUserModal(){document.getElementById("uName").value="";document.getElementById("uUsername").value="";document.getElementById("uPassword").value="";document.getElementById("uRole").value="employee";document.getElementById("userErr").textContent="";openModal("userModal")}
+async function saveUser(){
+  const name=document.getElementById("uName").value.trim(),username=document.getElementById("uUsername").value.trim(),password=document.getElementById("uPassword").value,role=document.getElementById("uRole").value
+  if(!name||!username||!password){document.getElementById("userErr").textContent="All fields required.";return}
+  try{const res=await fetch("/admin/users",{method:"POST",headers:hdr(),body:JSON.stringify({name,username,password,role})});const data=await res.json();if(data.error){document.getElementById("userErr").textContent=data.error;return}closeModal("userModal");loadUsers()}catch(e){document.getElementById("userErr").textContent="Failed."}
+}
+async function deleteUser(id){if(!confirm("Remove employee?"))return;try{await fetch("/admin/users/"+id,{method:"DELETE",headers:hdr()});loadUsers()}catch(e){alert("Failed.")}}
+</script>
+</body>
+</html>
