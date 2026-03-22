@@ -3,248 +3,718 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Jet Mission Planner</title>
+<title>Anirudh Jet Advisory</title>
 <link rel="manifest" href="/manifest.json"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="JetMission"/>
-<meta name="theme-color" content="#f5b01e"/>
+<meta name="apple-mobile-web-app-title" content="AJA"/>
+<meta name="theme-color" content="#D4AF37"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Share+Tech+Mono&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-:root{--bg:#060b14;--panel:rgba(8,15,28,0.96);--border:rgba(245,176,30,0.18);--amber:#f5b01e;--amber-dim:#a37510;--cyan:#00e5ff;--text:#dce8f0;--muted:#5a7080;--card-bg:rgba(255,255,255,0.03);--card-hover:rgba(245,176,30,0.07);--danger:#ff4e4e;--success:#00e5a0;--radius:10px;--font-hud:'Orbitron',monospace;--font-data:'Share Tech Mono',monospace;--font-body:'Inter',sans-serif}
+:root{
+  --bg:#0F172A;
+  --surface:#1E293B;
+  --surface2:#263348;
+  --border:rgba(212,175,55,0.2);
+  --border2:rgba(255,255,255,0.07);
+  --gold:#D4AF37;
+  --gold-dim:#9A7B1E;
+  --blue:#3B82F6;
+  --blue-dark:#2563EB;
+  --text:#F1F5F9;
+  --text2:#94A3B8;
+  --danger:#EF4444;
+  --success:#10B981;
+  --radius:12px;
+  --font-body:'Inter',system-ui,sans-serif;
+  --font-display:'Playfair Display',serif;
+  --shadow:0 4px 24px rgba(0,0,0,0.4);
+  --shadow-gold:0 0 30px rgba(212,175,55,0.15);
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:100vh;overflow:hidden}
-#loginScreen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center}
-.login-box{width:340px;max-width:90vw;background:rgba(8,15,28,0.98);border:1px solid var(--border);border-radius:16px;padding:36px 28px;text-align:center}
-.login-logo{font-family:var(--font-hud);font-size:18px;font-weight:800;letter-spacing:0.2em;color:var(--amber);margin-bottom:6px}
-.login-logo span{color:var(--cyan)}
-.login-sub{font-family:var(--font-data);font-size:11px;color:var(--muted);letter-spacing:0.1em;margin-bottom:28px;text-transform:uppercase}
-.lf{margin-bottom:14px;text-align:left}
-.lf label{display:block;font-family:var(--font-data);font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px}
-.lf input{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:var(--text);font-family:var(--font-data);font-size:14px;padding:11px 14px;outline:none;transition:border-color 0.2s}
-.lf input:focus{border-color:var(--amber)}
-.login-btn{width:100%;padding:13px;border:none;border-radius:8px;background:linear-gradient(135deg,#c98f10,var(--amber));color:#060b14;font-family:var(--font-hud);font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;margin-top:6px;transition:all 0.2s}
-.login-btn:hover{box-shadow:0 0 30px rgba(245,176,30,0.4)}
-.login-err{color:var(--danger);font-family:var(--font-data);font-size:12px;margin-top:12px;min-height:18px}
-#topbar{position:fixed;top:0;left:0;right:0;height:52px;background:linear-gradient(90deg,#060b14,#0b1626);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px;z-index:1000;gap:10px}
-.logo{font-family:var(--font-hud);font-size:11px;font-weight:800;letter-spacing:0.18em;color:var(--amber);white-space:nowrap}
-.logo span{color:var(--cyan)}
-.divider{width:1px;height:26px;background:var(--border);flex-shrink:0}
-.route-row{display:flex;align-items:center;gap:7px;font-family:var(--font-data);font-size:12px}
-.chip{background:rgba(245,176,30,0.1);border:1px solid var(--border);border-radius:4px;padding:3px 8px;color:var(--amber);letter-spacing:0.1em;min-width:46px;text-align:center;white-space:nowrap}
-.chip.empty{color:var(--muted);background:transparent;border-color:rgba(255,255,255,0.07)}
-.arrow-txt{color:var(--muted);font-size:13px;flex-shrink:0}
-.spacer{flex:1}
-.user-name{font-family:var(--font-data);font-size:10px;color:var(--muted);letter-spacing:0.08em;white-space:nowrap}
-.pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2s infinite;flex-shrink:0}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-#panelToggle{display:none;align-items:center;justify-content:center;width:34px;height:34px;background:rgba(245,176,30,0.1);border:1px solid var(--border);border-radius:8px;cursor:pointer;color:var(--amber);font-size:16px;flex-shrink:0}
-#logoutBtn{font-family:var(--font-data);font-size:10px;color:var(--muted);cursor:pointer;letter-spacing:0.06em;padding:4px 8px;border:1px solid var(--border);border-radius:4px;white-space:nowrap;flex-shrink:0}
-#logoutBtn:hover{color:var(--danger);border-color:var(--danger)}
-.admin-link{font-family:var(--font-data);font-size:10px;color:var(--amber);letter-spacing:0.06em;padding:4px 8px;border:1px solid var(--border);border-radius:4px;white-space:nowrap;flex-shrink:0;text-decoration:none}
-#map{position:fixed;top:52px;left:0;right:0;bottom:0;z-index:1}
-.leaflet-container{background:#060b14 !important}
-.plane-icon{font-size:12px;line-height:1;filter:drop-shadow(0 0 4px rgba(245,176,30,0.6));cursor:pointer;transition:transform 0.12s;user-select:none}
-.plane-icon:hover{transform:scale(1.5)}
-.plane-icon.from{filter:drop-shadow(0 0 6px #00e5ff);transform:scale(1.7)}
-.plane-icon.to{filter:drop-shadow(0 0 6px #00e5a0);transform:scale(1.7)}
-#panel{position:fixed;top:52px;left:0;bottom:0;width:320px;background:var(--panel);border-right:1px solid var(--border);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);z-index:500;display:flex;flex-direction:column;overflow:hidden;transition:transform 0.28s ease}
-#tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
-.tab{flex:1;padding:11px 0;text-align:center;font-family:var(--font-hud);font-size:7.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:color 0.2s;border-bottom:2px solid transparent;margin-bottom:-1px}
-.tab:hover{color:var(--text)}
-.tab.active{color:var(--amber);border-bottom-color:var(--amber)}
-.pane{flex:1;overflow-y:auto;padding:14px;display:none}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:14px}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ══════════════════════════════════
+   LOGIN SCREEN
+══════════════════════════════════ */
+#loginScreen{
+  position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(135deg,#0F172A 0%,#1a2540 50%,#0F172A 100%);
+  display:flex;align-items:center;justify-content:center;
+}
+.login-bg-pattern{
+  position:absolute;inset:0;
+  background-image:radial-gradient(circle at 20% 50%,rgba(212,175,55,0.04) 0%,transparent 50%),
+    radial-gradient(circle at 80% 20%,rgba(59,130,246,0.04) 0%,transparent 50%);
+  pointer-events:none;
+}
+.login-card{
+  position:relative;z-index:1;
+  width:420px;max-width:92vw;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:44px 40px;
+  box-shadow:var(--shadow),var(--shadow-gold);
+}
+.login-brand{
+  text-align:center;margin-bottom:32px;
+}
+.login-brand-logo{
+  display:inline-flex;align-items:center;gap:10px;margin-bottom:10px;
+}
+.login-brand-icon{
+  width:42px;height:42px;
+  background:linear-gradient(135deg,var(--gold-dim),var(--gold));
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;
+}
+.login-brand-name{
+  font-family:var(--font-display);
+  font-size:22px;font-weight:700;
+  color:var(--text);
+  letter-spacing:0.02em;
+}
+.login-brand-name span{color:var(--gold)}
+.login-brand-sub{
+  font-size:12px;color:var(--text2);
+  letter-spacing:0.06em;text-transform:uppercase;
+}
+.login-divider{
+  height:1px;background:var(--border2);margin-bottom:28px;
+}
+.login-title{
+  font-size:16px;font-weight:600;color:var(--text);
+  margin-bottom:6px;
+}
+.login-sub{
+  font-size:12px;color:var(--text2);margin-bottom:24px;
+}
+.form-group{margin-bottom:16px}
+.form-group label{
+  display:block;font-size:11px;font-weight:500;
+  color:var(--text2);text-transform:uppercase;
+  letter-spacing:0.08em;margin-bottom:7px;
+}
+.input-wrap{position:relative}
+.form-group input{
+  width:100%;
+  background:rgba(255,255,255,0.04);
+  border:1px solid var(--border2);
+  border-radius:10px;
+  color:var(--text);
+  font-family:var(--font-body);
+  font-size:14px;
+  padding:12px 16px;
+  outline:none;
+  transition:border-color 0.2s,background 0.2s;
+}
+.form-group input:focus{
+  border-color:var(--gold);
+  background:rgba(212,175,55,0.04);
+}
+.pw-toggle{
+  position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  cursor:pointer;color:var(--text2);font-size:16px;
+  user-select:none;transition:color 0.2s;
+  background:none;border:none;padding:0;
+}
+.pw-toggle:hover{color:var(--gold)}
+.login-btn{
+  width:100%;padding:13px;margin-top:6px;
+  border:none;border-radius:10px;
+  background:linear-gradient(135deg,var(--gold-dim),var(--gold));
+  color:#0F172A;
+  font-family:var(--font-body);
+  font-size:13px;font-weight:700;
+  letter-spacing:0.06em;text-transform:uppercase;
+  cursor:pointer;
+  transition:all 0.2s;
+  box-shadow:0 4px 16px rgba(212,175,55,0.25);
+}
+.login-btn:hover{
+  box-shadow:0 6px 24px rgba(212,175,55,0.4);
+  transform:translateY(-1px);
+}
+.login-err{
+  color:var(--danger);font-size:12px;
+  margin-top:12px;min-height:18px;text-align:center;
+}
+.login-footer{
+  text-align:center;margin-top:24px;
+  font-size:11px;color:var(--text2);
+  border-top:1px solid var(--border2);
+  padding-top:20px;
+}
+
+/* ══════════════════════════════════
+   APP SHELL
+══════════════════════════════════ */
+#app{display:none;height:100vh;flex-direction:column}
+#app.visible{display:flex}
+
+/* ── TOP NAVIGATION BAR ── */
+#navbar{
+  height:60px;flex-shrink:0;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;
+  padding:0 20px;gap:16px;
+  z-index:200;
+}
+.nav-brand{
+  display:flex;align-items:center;gap:10px;
+  text-decoration:none;flex-shrink:0;
+}
+.nav-brand-icon{
+  width:34px;height:34px;
+  background:linear-gradient(135deg,var(--gold-dim),var(--gold));
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+}
+.nav-brand-text{
+  font-family:var(--font-display);
+  font-size:15px;font-weight:700;color:var(--text);
+  white-space:nowrap;
+}
+.nav-brand-text span{color:var(--gold)}
+.nav-divider{width:1px;height:28px;background:var(--border2);flex-shrink:0}
+.nav-route{
+  display:flex;align-items:center;gap:8px;
+  flex-shrink:0;
+}
+.nav-chip{
+  background:rgba(212,175,55,0.1);
+  border:1px solid var(--border);
+  border-radius:6px;padding:4px 10px;
+  color:var(--gold);font-size:12px;font-weight:500;
+  letter-spacing:0.06em;min-width:52px;text-align:center;
+  white-space:nowrap;
+}
+.nav-chip.empty{color:var(--text2);background:transparent;border-color:var(--border2)}
+.nav-arrow{color:var(--text2);font-size:12px}
+.nav-spacer{flex:1}
+.nav-user{
+  display:flex;align-items:center;gap:8px;
+}
+.nav-user-name{
+  font-size:12px;font-weight:500;color:var(--text2);
+  white-space:nowrap;
+}
+.nav-user-avatar{
+  width:32px;height:32px;border-radius:50%;
+  background:linear-gradient(135deg,var(--gold-dim),var(--gold));
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:#0F172A;
+  flex-shrink:0;
+}
+.nav-btn{
+  font-size:11px;font-weight:500;color:var(--text2);
+  cursor:pointer;padding:5px 10px;
+  border:1px solid var(--border2);border-radius:6px;
+  background:transparent;white-space:nowrap;
+  transition:all 0.2s;
+}
+.nav-btn:hover{color:var(--danger);border-color:var(--danger)}
+.nav-admin-btn{
+  font-size:11px;font-weight:500;color:var(--gold);
+  text-decoration:none;padding:5px 10px;
+  border:1px solid var(--border);border-radius:6px;
+  white-space:nowrap;transition:all 0.2s;
+}
+.nav-admin-btn:hover{background:rgba(212,175,55,0.08)}
+.menu-btn{
+  display:none;width:36px;height:36px;
+  background:var(--surface2);border:1px solid var(--border2);
+  border-radius:8px;cursor:pointer;
+  align-items:center;justify-content:center;
+  font-size:16px;color:var(--text2);flex-shrink:0;
+}
+.live-badge{
+  display:flex;align-items:center;gap:5px;
+  font-size:10px;font-weight:500;color:var(--text2);
+  letter-spacing:0.06em;text-transform:uppercase;
+  flex-shrink:0;
+}
+.live-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--success);
+  box-shadow:0 0 6px var(--success);
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* ── MAIN LAYOUT ── */
+#main{
+  display:flex;flex:1;overflow:hidden;
+}
+
+/* ── SIDEBAR ── */
+#sidebar{
+  width:300px;flex-shrink:0;
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  transition:transform 0.28s ease;
+}
+.sidebar-tabs{
+  display:flex;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.s-tab{
+  flex:1;padding:14px 0;
+  text-align:center;
+  font-size:10px;font-weight:600;
+  letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--text2);cursor:pointer;
+  border-bottom:2px solid transparent;
+  margin-bottom:-1px;transition:color 0.2s;
+}
+.s-tab:hover{color:var(--text)}
+.s-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.pane{flex:1;overflow-y:auto;padding:16px;display:none}
 .pane.active{display:block}
-.pane::-webkit-scrollbar{width:3px}
-.pane::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-.sh{font-family:var(--font-hud);font-size:8.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
+
+/* ── SECTION HEADING ── */
+.sh{
+  font-size:10px;font-weight:600;letter-spacing:0.12em;
+  text-transform:uppercase;color:var(--text2);
+  margin:18px 0 10px;
+}
 .sh:first-child{margin-top:0}
-.hint{background:rgba(0,229,255,0.05);border:1px solid rgba(0,229,255,0.15);border-radius:var(--radius);padding:9px 12px;font-family:var(--font-data);font-size:11px;color:#7dd8e8;line-height:1.6;margin-bottom:12px;letter-spacing:0.04em}
-.field{margin-bottom:9px}
-.field label{display:block;font-family:var(--font-data);font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px}
-.field input,.field select,.field textarea{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius);color:var(--text);font-family:var(--font-data);font-size:13px;padding:8px 11px;outline:none;transition:border-color 0.2s}
-.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--amber);background:rgba(245,176,30,0.05)}
-.field select option{background:#060b14}
-.field textarea{resize:vertical;min-height:70px}
-.btn{width:100%;padding:11px;border:none;border-radius:var(--radius);cursor:pointer;font-family:var(--font-hud);font-size:9px;letter-spacing:0.2em;text-transform:uppercase;transition:all 0.2s;margin-top:10px}
-.btn-primary{background:linear-gradient(135deg,#c98f10,var(--amber));color:#060b14;font-weight:800;box-shadow:0 0 20px rgba(245,176,30,0.2)}
-.btn-primary:hover{box-shadow:0 0 32px rgba(245,176,30,0.4);transform:translateY(-1px)}
-.btn-secondary{background:rgba(255,255,255,0.04);color:var(--text);border:1px solid var(--border)}
-.btn-secondary:hover{background:rgba(245,176,30,0.08);border-color:var(--amber-dim)}
-#jetSwiper{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;padding:4px 2px 12px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+
+/* ── INFO BOX ── */
+.info-box{
+  background:rgba(59,130,246,0.06);
+  border:1px solid rgba(59,130,246,0.2);
+  border-radius:10px;padding:11px 13px;
+  font-size:12px;color:#93C5FD;
+  line-height:1.6;margin-bottom:14px;
+}
+
+/* ── FORM ELEMENTS ── */
+.field{margin-bottom:12px}
+.field label{
+  display:block;font-size:11px;font-weight:500;
+  color:var(--text2);text-transform:uppercase;
+  letter-spacing:0.08em;margin-bottom:5px;
+}
+.field input,.field select,.field textarea{
+  width:100%;
+  background:rgba(255,255,255,0.04);
+  border:1px solid var(--border2);
+  border-radius:9px;color:var(--text);
+  font-family:var(--font-body);font-size:13px;
+  padding:10px 13px;outline:none;
+  transition:border-color 0.2s,background 0.2s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:var(--gold);background:rgba(212,175,55,0.03);
+}
+.field select option{background:#1E293B}
+.field textarea{resize:vertical;min-height:72px}
+
+/* ── BUTTONS ── */
+.btn{
+  width:100%;padding:12px;border:none;
+  border-radius:10px;cursor:pointer;
+  font-family:var(--font-body);font-size:12px;
+  font-weight:600;letter-spacing:0.06em;
+  text-transform:uppercase;transition:all 0.2s;
+  margin-top:10px;
+}
+.btn-gold{
+  background:linear-gradient(135deg,var(--gold-dim),var(--gold));
+  color:#0F172A;
+  box-shadow:0 4px 14px rgba(212,175,55,0.2);
+}
+.btn-gold:hover{box-shadow:0 6px 20px rgba(212,175,55,0.35);transform:translateY(-1px)}
+.btn-outline{
+  background:transparent;color:var(--text2);
+  border:1px solid var(--border2);
+}
+.btn-outline:hover{background:rgba(255,255,255,0.04);color:var(--text)}
+
+/* ── AIRCRAFT SWIPER ── */
+#jetSwiper{
+  display:flex;overflow-x:auto;
+  scroll-snap-type:x mandatory;
+  gap:12px;padding:4px 2px 14px;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+}
 #jetSwiper::-webkit-scrollbar{display:none}
-.jet-card{flex:0 0 88%;scroll-snap-align:start;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color 0.2s}
-.jet-card.active{border-color:var(--amber)}
-.jet-img{width:100%;height:130px;background:linear-gradient(135deg,#0d1a2e,#1a2a40);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.jet-card{
+  flex:0 0 90%;scroll-snap-align:start;
+  background:var(--surface2);
+  border:1px solid var(--border2);
+  border-radius:14px;overflow:hidden;
+  cursor:pointer;transition:border-color 0.2s,box-shadow 0.2s;
+}
+.jet-card:hover{border-color:rgba(212,175,55,0.3)}
+.jet-card.active{
+  border-color:var(--gold);
+  box-shadow:0 0 20px rgba(212,175,55,0.12);
+}
+.jet-img{
+  width:100%;height:130px;
+  background:linear-gradient(135deg,#0d1a2e,#1a2a40);
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;position:relative;
+}
 .jet-img img{width:100%;height:100%;object-fit:cover}
-.jet-img-ph{font-size:44px;opacity:0.25}
-.jet-body{padding:11px}
-.jet-name{font-family:var(--font-hud);font-size:9.5px;letter-spacing:0.12em;color:var(--amber);text-transform:uppercase;margin-bottom:9px}
-.jet-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
-.stat{background:rgba(255,255,255,0.03);border-radius:6px;padding:6px 8px}
-.stat-lbl{font-size:9px;color:var(--muted);font-family:var(--font-data);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px}
-.stat-val{font-size:12px;color:var(--text);font-family:var(--font-data)}
-.stat-val.gold{color:var(--amber)}
-.badge-stop{display:inline-block;border-radius:4px;padding:3px 8px;font-family:var(--font-data);font-size:10px;letter-spacing:0.06em;background:rgba(255,78,78,0.09);border:1px solid rgba(255,78,78,0.25);color:var(--danger)}
-.badge-ok{background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.22);color:var(--success)}
-.swipe-hint{text-align:center;font-family:var(--font-data);font-size:10px;color:var(--muted);letter-spacing:0.06em;margin-top:2px}
-#pane-costs{padding-bottom:50px}
-.cost-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+.jet-img-ph{font-size:40px;opacity:0.2}
+.jet-img-overlay{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:8px 12px;
+  background:linear-gradient(transparent,rgba(0,0,0,0.7));
+}
+.jet-img-name{
+  font-size:11px;font-weight:600;color:#fff;
+  letter-spacing:0.06em;text-transform:uppercase;
+}
+.jet-body{padding:12px}
+.jet-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.stat{
+  background:rgba(255,255,255,0.03);
+  border:1px solid var(--border2);
+  border-radius:8px;padding:8px 10px;
+}
+.stat-lbl{
+  font-size:9px;font-weight:500;color:var(--text2);
+  text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px;
+}
+.stat-val{font-size:13px;font-weight:600;color:var(--text)}
+.stat-val.gold{color:var(--gold)}
+.badge{
+  display:inline-flex;align-items:center;gap:4px;
+  border-radius:6px;padding:4px 9px;
+  font-size:10px;font-weight:500;letter-spacing:0.04em;
+}
+.badge-stop{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#FCA5A5}
+.badge-ok{background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);color:#6EE7B7}
+.swipe-hint{
+  text-align:center;font-size:10px;color:var(--text2);
+  letter-spacing:0.06em;margin-top:2px;
+}
+
+/* ── COST PANEL ── */
+#pane-costs{padding-bottom:60px}
+.cost-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);
+}
 .cost-row:last-child{border-bottom:none}
-.cost-lbl{font-family:var(--font-data);font-size:10px;color:var(--muted);letter-spacing:0.06em}
-.cost-val{font-family:var(--font-data);font-size:13px;color:var(--text)}
-.cost-val.gold{color:var(--amber)}
-.verdict-box{background:rgba(245,176,30,0.07);border:1px solid var(--border);border-radius:var(--radius);padding:13px;margin-top:12px}
-.verdict-box .vhead{font-family:var(--font-hud);font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:5px}
-.verdict-box .vtext{font-family:var(--font-data);font-size:13px;color:var(--success);line-height:1.5}
-.client-saved{background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.22);border-radius:var(--radius);padding:10px 12px;font-family:var(--font-data);font-size:11px;color:var(--success);margin-top:10px;display:none}
-.empty{text-align:center;padding:40px 16px;color:var(--muted)}
-.empty-icon{font-size:30px;opacity:0.3;margin-bottom:12px}
-.empty p{font-family:var(--font-data);font-size:11px;line-height:1.7;letter-spacing:0.06em}
-#mapHint{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(6,11,20,0.88);border:1px solid var(--border);backdrop-filter:blur(10px);border-radius:30px;padding:8px 18px;font-family:var(--font-data);font-size:11px;color:var(--muted);letter-spacing:0.08em;z-index:600;pointer-events:none;white-space:nowrap}
-#mapHint span{color:var(--amber)}
-#loader{position:fixed;top:52px;left:0;right:0;bottom:0;background:rgba(6,11,20,0.65);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:700;opacity:0;pointer-events:none;transition:opacity 0.25s}
+.cost-lbl{font-size:11px;color:var(--text2)}
+.cost-val{font-size:13px;font-weight:600;color:var(--text)}
+.cost-val.gold{color:var(--gold)}
+.verdict-card{
+  background:linear-gradient(135deg,rgba(212,175,55,0.06),rgba(212,175,55,0.02));
+  border:1px solid var(--border);border-radius:12px;
+  padding:16px;margin-top:14px;
+}
+.verdict-label{
+  font-size:9px;font-weight:600;letter-spacing:0.14em;
+  text-transform:uppercase;color:var(--text2);margin-bottom:6px;
+}
+.verdict-text{font-size:14px;font-weight:600;color:var(--success);line-height:1.5}
+
+/* ── CLIENT SAVED ── */
+.client-saved{
+  background:rgba(16,185,129,0.08);
+  border:1px solid rgba(16,185,129,0.25);
+  border-radius:10px;padding:11px 13px;
+  font-size:12px;color:#6EE7B7;
+  margin-top:10px;display:none;
+}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:48px 16px;color:var(--text2)}
+.empty-icon{font-size:36px;opacity:0.25;margin-bottom:14px}
+.empty p{font-size:12px;line-height:1.8;color:var(--text2)}
+
+/* ── MAP ── */
+#mapArea{
+  flex:1;position:relative;overflow:hidden;
+}
+#map{position:absolute;inset:0;z-index:1}
+.leaflet-container{background:#0F172A !important}
+
+/* ── MAP HINT ── */
+#mapHint{
+  position:absolute;bottom:24px;left:50%;
+  transform:translateX(-50%);
+  background:rgba(15,23,42,0.92);
+  border:1px solid var(--border);
+  backdrop-filter:blur(12px);
+  border-radius:30px;
+  padding:8px 20px;
+  font-size:11px;font-weight:500;
+  color:var(--text2);letter-spacing:0.06em;
+  z-index:10;pointer-events:none;white-space:nowrap;
+}
+#mapHint span{color:var(--gold)}
+
+/* ── LOADER ── */
+#loader{
+  position:absolute;inset:0;
+  background:rgba(15,23,42,0.7);
+  backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;
+  z-index:100;opacity:0;pointer-events:none;
+  transition:opacity 0.25s;
+}
 #loader.on{opacity:1;pointer-events:all}
-.spinner{width:44px;height:44px;border:2px solid rgba(245,176,30,0.15);border-top-color:var(--amber);border-radius:50%;animation:spin 0.75s linear infinite}
+.spinner{
+  width:40px;height:40px;
+  border:2px solid rgba(212,175,55,0.15);
+  border-top-color:var(--gold);
+  border-radius:50%;
+  animation:spin 0.75s linear infinite;
+}
 @keyframes spin{to{transform:rotate(360deg)}}
-.apt-tip{background:rgba(6,11,20,0.95) !important;border:1px solid rgba(245,176,30,0.3) !important;border-radius:6px !important;padding:5px 10px !important;box-shadow:0 4px 18px rgba(0,0,0,0.5) !important;white-space:nowrap;font-family:'Share Tech Mono',monospace}
+
+/* ── PLANE MARKER ── */
+.plane-icon{
+  font-size:14px;line-height:1;
+  filter:drop-shadow(0 0 4px rgba(212,175,55,0.6));
+  cursor:pointer;transition:transform 0.12s;
+}
+.plane-icon:hover{transform:scale(1.5)}
+.plane-icon.from{filter:drop-shadow(0 0 6px #3B82F6);transform:scale(1.6)}
+.plane-icon.to{filter:drop-shadow(0 0 6px #10B981);transform:scale(1.6)}
+
+/* ── TOOLTIP ── */
+.apt-tip{
+  background:rgba(15,23,42,0.96) !important;
+  border:1px solid rgba(212,175,55,0.3) !important;
+  border-radius:7px !important;
+  padding:5px 11px !important;
+  box-shadow:0 4px 20px rgba(0,0,0,0.5) !important;
+  white-space:nowrap;
+  font-family:var(--font-body) !important;
+  font-size:12px !important;
+  font-weight:500;
+}
 .apt-tip::before{display:none !important}
+
+/* ══════════════════════════════════
+   MOBILE
+══════════════════════════════════ */
 @media(max-width:768px){
-  #panelToggle{display:flex}
-  #panel{width:100%;transform:translateX(-100%)}
-  #panel.open{transform:translateX(0)}
-  .logo{font-size:10px}
-  .chip{min-width:38px;font-size:11px;padding:3px 6px}
-  #mapHint{font-size:10px;padding:7px 14px;bottom:18px}
+  .menu-btn{display:flex}
+  #sidebar{
+    position:fixed;top:60px;left:0;bottom:0;
+    z-index:150;transform:translateX(-100%);
+    width:100%;
+    box-shadow:4px 0 24px rgba(0,0,0,0.4);
+  }
+  #sidebar.open{transform:translateX(0)}
+  .nav-brand-text{font-size:13px}
+  .nav-user-name{display:none}
+  #mapHint{font-size:10px;padding:7px 14px;bottom:16px}
+  .nav-admin-btn{display:none}
 }
 </style>
 </head>
 <body>
 
+<!-- ══ LOGIN SCREEN ══ -->
 <div id="loginScreen">
-  <div class="login-box">
-    <div class="login-logo">JET<span>MISSION</span></div>
-    <div class="login-sub">Anirudh Jet Advisory</div>
-    <div class="lf"><label>Username</label><input id="loginUser" type="text" placeholder="Enter username" autocapitalize="none" autocorrect="off"/></div>
-    <div class="lf"><label>Password</label><input id="loginPass" type="password" placeholder="Enter password"/></div>
-    <button class="login-btn" onclick="doLogin()">Sign In</button>
-    <div class="login-err" id="loginErr"></div>
-  </div>
-</div>
-
-<div id="topbar">
-  <div id="panelToggle" onclick="togglePanel()">☰</div>
-  <div class="logo">JET<span>MISSION</span></div>
-  <div class="divider"></div>
-  <div class="route-row">
-    <div class="chip empty" id="fromChip">FROM</div>
-    <div class="arrow-txt">→</div>
-    <div class="chip empty" id="toChip">TO</div>
-  </div>
-  <div class="spacer"></div>
-  <span class="user-name" id="userName"></span>
-  <a class="admin-link" id="adminLink" href="/admin.html" style="display:none">Admin</a>
-  <div id="logoutBtn" onclick="doLogout()">Sign out</div>
-  <div class="pulse-dot"></div>
-</div>
-
-<div id="map"></div>
-<div id="mapHint">Zoom in to see airports &nbsp;·&nbsp; <span>pinch to zoom</span></div>
-<div id="loader"><div class="spinner"></div></div>
-
-<div id="panel">
-  <div id="tabs">
-    <div class="tab active" onclick="openTab('mission',this)">Mission</div>
-    <div class="tab"        onclick="openTab('results',this)">Results</div>
-    <div class="tab"        onclick="openTab('costs',this)">Cost</div>
-    <div class="tab"        onclick="openTab('client',this)">Client</div>
-  </div>
-
-  <div class="pane active" id="pane-mission">
-    <div class="hint">Zoom in on the map and tap airport icons ✈ to set your route.</div>
-    <div class="sh">Passengers</div>
-    <div class="field"><label>Number of passengers</label><input id="pax" type="number" value="8" min="1" max="19"/></div>
-    <button class="btn btn-primary" onclick="runMission()">&#9654; &nbsp;Plan Mission</button>
-    <button class="btn btn-secondary" onclick="resetAll()">&#8634; &nbsp;Reset</button>
-  </div>
-
-  <div class="pane" id="pane-results">
-    <div class="empty" id="emptyResults"><div class="empty-icon">&#9992;</div><p>No mission planned yet.<br/>Select airports and run a mission.</p></div>
-    <div id="jetSwiper"></div>
-    <div class="swipe-hint" id="swipeHint" style="display:none">&#8592; Swipe to compare aircraft &#8594;</div>
-  </div>
-
-  <div class="pane" id="pane-costs">
-    <div class="sh">Annual Parameters</div>
-    <div class="field"><label>Annual Flight Hours</label><input id="hours" type="number" value="200"/></div>
-    <div class="field"><label>Charter Rate ($/hr)</label><input id="charterRate" type="number" value="8000"/></div>
-    <div class="sh">Ownership Costs</div>
-    <div class="field"><label>Fuel Price ($/gal)</label><input id="fuelPrice" type="number" value="6.5" step="0.1"/></div>
-    <div class="field"><label>Crew Cost ($/year)</label><input id="crewCost" type="number" value="400000"/></div>
-    <div class="field"><label>Maintenance ($/year)</label><input id="maintenanceCost" type="number" value="300000"/></div>
-    <div class="field"><label>Hangar ($/year)</label><input id="hangarCost" type="number" value="150000"/></div>
-    <div class="field"><label>Insurance ($/year)</label><input id="insuranceCost" type="number" value="120000"/></div>
-    <button class="btn btn-primary" onclick="calcCosts()">Calculate Comparison</button>
-    <div id="costOut"></div>
-  </div>
-
-  <div class="pane" id="pane-client">
-    <div class="sh">Save Client Details</div>
-    <div class="field"><label>Full Name *</label><input id="cName" type="text" placeholder="e.g. Rahul Mehta"/></div>
-    <div class="field"><label>Phone</label><input id="cPhone" type="tel" placeholder="+91 98765 43210"/></div>
-    <div class="field"><label>Email</label><input id="cEmail" type="email" placeholder="rahul@company.com"/></div>
-    <div class="field"><label>Company</label><input id="cCompany" type="text" placeholder="Company name"/></div>
-    <div class="field"><label>Preferred Aircraft</label><input id="cAircraft" type="text" placeholder="e.g. Gulfstream G650"/></div>
-    <div class="field"><label>Typical Route</label><input id="cRoute" type="text" placeholder="e.g. Mumbai to Dubai"/></div>
-    <div class="field"><label>Passengers</label><input id="cPax" type="number" placeholder="e.g. 8"/></div>
-    <div class="field"><label>Budget Range</label>
-      <select id="cBudget">
-        <option value="">Select range</option>
-        <option>Under $50,000</option>
-        <option>$50,000 - $100,000</option>
-        <option>$100,000 - $250,000</option>
-        <option>$250,000 - $500,000</option>
-        <option>Above $500,000</option>
-      </select>
+  <div class="login-bg-pattern"></div>
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="login-brand-logo">
+        <div class="login-brand-icon">✈</div>
+        <div class="login-brand-name">Anirudh <span>Jet</span></div>
+      </div>
+      <div class="login-brand-sub">Advisory Platform</div>
     </div>
-    <div class="field"><label>Notes</label><textarea id="cNotes" placeholder="Any special requirements..."></textarea></div>
-    <button class="btn btn-primary" onclick="saveClient()">Save Client</button>
-    <div class="client-saved" id="clientSaved">Client saved successfully.</div>
+    <div class="login-divider"></div>
+    <div class="login-title">Welcome back</div>
+    <div class="login-sub">Sign in to access your advisory dashboard</div>
+    <div class="form-group">
+      <label>Username</label>
+      <input id="loginUser" type="text" placeholder="Enter your username" autocapitalize="none" autocorrect="off"/>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <div class="input-wrap">
+        <input id="loginPass" type="password" placeholder="Enter your password" style="padding-right:44px"/>
+        <button class="pw-toggle" onclick="togglePw()" type="button" id="pwToggle" title="Show/hide password">👁</button>
+      </div>
+    </div>
+    <button class="login-btn" onclick="doLogin()">Sign In to Dashboard</button>
+    <div class="login-err" id="loginErr"></div>
+    <div class="login-footer">Anirudh Jet Advisory &nbsp;·&nbsp; Secure Access</div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app">
+
+  <!-- NAVBAR -->
+  <nav id="navbar">
+    <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+    <a class="nav-brand" href="#">
+      <div class="nav-brand-icon">✈</div>
+      <div class="nav-brand-text">Anirudh <span>Jet</span></div>
+    </a>
+    <div class="nav-divider"></div>
+    <div class="nav-route">
+      <div class="nav-chip empty" id="fromChip">FROM</div>
+      <div class="nav-arrow">→</div>
+      <div class="nav-chip empty" id="toChip">TO</div>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-user">
+      <div class="nav-user-name" id="userName"></div>
+      <div class="nav-user-avatar" id="userAvatar">A</div>
+    </div>
+    <a class="nav-admin-btn" id="adminLink" href="/admin.html" style="display:none">⚙ Admin</a>
+    <button class="nav-btn" onclick="doLogout()">Sign out</button>
+    <div class="live-badge"><div class="live-dot"></div>Live</div>
+  </nav>
+
+  <!-- MAIN -->
+  <div id="main">
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar">
+      <div class="sidebar-tabs">
+        <div class="s-tab active" onclick="openTab('mission',this)">Mission</div>
+        <div class="s-tab" onclick="openTab('results',this)">Results</div>
+        <div class="s-tab" onclick="openTab('costs',this)">Cost</div>
+        <div class="s-tab" onclick="openTab('client',this)">Client</div>
+      </div>
+
+      <!-- MISSION PANE -->
+      <div class="pane active" id="pane-mission">
+        <div class="info-box">Zoom in on the map and tap ✈ airport icons to set your origin and destination.</div>
+        <div class="sh">Passenger Load</div>
+        <div class="field">
+          <label>Number of Passengers</label>
+          <input id="pax" type="number" value="8" min="1" max="19"/>
+        </div>
+        <button class="btn btn-gold" onclick="runMission()">▶ &nbsp;Plan Mission</button>
+        <button class="btn btn-outline" onclick="resetAll()" style="margin-top:8px">↺ &nbsp;Reset Selection</button>
+      </div>
+
+      <!-- RESULTS PANE -->
+      <div class="pane" id="pane-results">
+        <div class="empty" id="emptyResults">
+          <div class="empty-icon">✈</div>
+          <p>No mission planned yet.<br/>Select airports and run a mission.</p>
+        </div>
+        <div id="jetSwiper"></div>
+        <div class="swipe-hint" id="swipeHint" style="display:none">← Swipe to compare aircraft →</div>
+      </div>
+
+      <!-- COST PANE -->
+      <div class="pane" id="pane-costs">
+        <div class="sh">Annual Parameters</div>
+        <div class="field"><label>Annual Flight Hours</label><input id="hours" type="number" value="200"/></div>
+        <div class="field"><label>Charter Rate ($/hr)</label><input id="charterRate" type="number" value="8000"/></div>
+        <div class="sh">Ownership Costs (per year)</div>
+        <div class="field"><label>Fuel Price ($/gal)</label><input id="fuelPrice" type="number" value="6.5" step="0.1"/></div>
+        <div class="field"><label>Crew Cost</label><input id="crewCost" type="number" value="400000"/></div>
+        <div class="field"><label>Maintenance</label><input id="maintenanceCost" type="number" value="300000"/></div>
+        <div class="field"><label>Hangar</label><input id="hangarCost" type="number" value="150000"/></div>
+        <div class="field"><label>Insurance</label><input id="insuranceCost" type="number" value="120000"/></div>
+        <button class="btn btn-gold" onclick="calcCosts()">Calculate Comparison</button>
+        <div id="costOut"></div>
+      </div>
+
+      <!-- CLIENT PANE -->
+      <div class="pane" id="pane-client">
+        <div class="sh">Save Client Details</div>
+        <div class="field"><label>Full Name *</label><input id="cName" type="text" placeholder="e.g. Rahul Mehta"/></div>
+        <div class="field"><label>Phone</label><input id="cPhone" type="tel" placeholder="+91 98765 43210"/></div>
+        <div class="field"><label>Email</label><input id="cEmail" type="email" placeholder="rahul@company.com"/></div>
+        <div class="field"><label>Company</label><input id="cCompany" type="text" placeholder="Company name"/></div>
+        <div class="field"><label>Preferred Aircraft</label><input id="cAircraft" type="text" placeholder="e.g. Gulfstream G650"/></div>
+        <div class="field"><label>Typical Route</label><input id="cRoute" type="text" placeholder="e.g. Mumbai to Dubai"/></div>
+        <div class="field"><label>Passengers</label><input id="cPax" type="number" placeholder="e.g. 8"/></div>
+        <div class="field"><label>Budget Range</label>
+          <select id="cBudget">
+            <option value="">Select range</option>
+            <option>Under $50,000</option>
+            <option>$50,000 - $100,000</option>
+            <option>$100,000 - $250,000</option>
+            <option>$250,000 - $500,000</option>
+            <option>Above $500,000</option>
+          </select>
+        </div>
+        <div class="field"><label>Notes</label><textarea id="cNotes" placeholder="Any special requirements..."></textarea></div>
+        <button class="btn btn-gold" onclick="saveClient()">Save Client</button>
+        <div class="client-saved" id="clientSaved">✓ &nbsp;Client saved successfully.</div>
+      </div>
+    </aside>
+
+    <!-- MAP AREA -->
+    <div id="mapArea">
+      <div id="map"></div>
+      <div id="mapHint">Zoom in to see airports &nbsp;·&nbsp; <span>pinch or scroll to zoom</span></div>
+      <div id="loader"><div class="spinner"></div></div>
+    </div>
+
   </div>
 </div>
 
 <script>
-let TOKEN=localStorage.getItem("jmp_token")||"",USER={}
+// ── AUTH ──────────────────────────────────────────────────────────────
+let TOKEN=localStorage.getItem("aja_token")||"", USER={}
 function hdr(){return{"Content-Type":"application/json","x-token":TOKEN}}
 
+function togglePw(){
+  const inp=document.getElementById("loginPass")
+  const btn=document.getElementById("pwToggle")
+  if(inp.type==="password"){inp.type="text";btn.textContent="🙈"}
+  else{inp.type="password";btn.textContent="👁"}
+}
+
 async function doLogin(){
-  const u=document.getElementById("loginUser").value.trim(),p=document.getElementById("loginPass").value
+  const u=document.getElementById("loginUser").value.trim()
+  const p=document.getElementById("loginPass").value
   const err=document.getElementById("loginErr");err.textContent=""
-  if(!u||!p){err.textContent="Enter username and password";return}
+  if(!u||!p){err.textContent="Please enter your username and password.";return}
   try{
     const res=await fetch("/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u,password:p})})
     const data=await res.json()
     if(data.error){err.textContent=data.error;return}
     TOKEN=data.token;USER={username:u,role:data.role,name:data.name}
-    localStorage.setItem("jmp_token",TOKEN)
+    localStorage.setItem("aja_token",TOKEN)
     document.getElementById("loginScreen").style.display="none"
     onLoggedIn()
-  }catch(e){err.textContent="Connection error. Try again."}
+  }catch(e){err.textContent="Connection error. Please try again."}
 }
 document.getElementById("loginPass").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()})
 document.getElementById("loginUser").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()})
 
 async function doLogout(){
   try{await fetch("/logout",{method:"POST",headers:hdr()})}catch(e){}
-  localStorage.removeItem("jmp_token");location.reload()
+  localStorage.removeItem("aja_token");location.reload()
 }
 
 function onLoggedIn(){
-  document.getElementById("userName").textContent=USER.name||""
+  const name=USER.name||USER.username||""
+  document.getElementById("userName").textContent=name
+  document.getElementById("userAvatar").textContent=name.charAt(0).toUpperCase()||"U"
   if(USER.role==="admin")document.getElementById("adminLink").style.display="inline"
+  document.getElementById("app").classList.add("visible")
   loadAirports()
 }
 
@@ -253,7 +723,7 @@ async function checkAuth(){
   try{
     const res=await fetch("/me",{headers:hdr()})
     const data=await res.json()
-    if(data.error){TOKEN="";localStorage.removeItem("jmp_token");return}
+    if(data.error){TOKEN="";localStorage.removeItem("aja_token");return}
     USER=data
     document.getElementById("loginScreen").style.display="none"
     onLoggedIn()
@@ -261,6 +731,7 @@ async function checkAuth(){
 }
 checkAuth()
 
+// ── MAP ───────────────────────────────────────────────────────────────
 const map=L.map("map",{zoomControl:false}).setView([20,0],2)
 L.control.zoom({position:"bottomright"}).addTo(map)
 const darkTile=L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{attribution:"© CartoDB",maxZoom:19})
@@ -268,48 +739,54 @@ const osmTile=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
 darkTile.addTo(map)
 darkTile.on("tileerror",()=>{map.removeLayer(darkTile);osmTile.addTo(map)})
 
+// ── STATE ─────────────────────────────────────────────────────────────
 let airports={},markerMap={},markersOnMap=false,fromCode=null,toCode=null,routeLines=[],missionData=[]
 const SHOW_ZOOM=4
 
+// ── TABS ──────────────────────────────────────────────────────────────
 function openTab(name,el){
   document.querySelectorAll(".pane").forEach(p=>p.classList.remove("active"))
-  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"))
+  document.querySelectorAll(".s-tab").forEach(t=>t.classList.remove("active"))
   document.getElementById("pane-"+name).classList.add("active");el.classList.add("active")
 }
-function togglePanel(){document.getElementById("panel").classList.toggle("open")}
-function closePanel(){if(window.innerWidth<=768)document.getElementById("panel").classList.remove("open")}
+function toggleSidebar(){document.getElementById("sidebar").classList.toggle("open")}
+function closeSidebar(){if(window.innerWidth<=768)document.getElementById("sidebar").classList.remove("open")}
 function setLoader(on){document.getElementById("loader").classList.toggle("on",on)}
 
+// ── AIRPORTS ─────────────────────────────────────────────────────────
 async function loadAirports(){
   try{
     const res=await fetch("/airports",{headers:hdr()})
     const data=await res.json()
     data.forEach(a=>{
       airports[a.iata]=a
-      const icon=L.divIcon({className:"",html:'<div class="plane-icon">&#9992;</div>',iconSize:[16,16],iconAnchor:[8,8]})
+      const icon=L.divIcon({className:"",html:'<div class="plane-icon">✈</div>',iconSize:[16,16],iconAnchor:[8,8]})
       const m=L.marker([a.lat,a.lon],{icon})
-      m.bindTooltip('<span style="font-family:\'Share Tech Mono\',monospace;font-size:12px;color:#f5b01e;letter-spacing:0.1em">'+a.iata+'</span>',{permanent:false,direction:"top",offset:[0,-8],className:"apt-tip"})
-      m.on("click",()=>{pickAirport(a.iata);closePanel()})
+      m.bindTooltip('<span style="font-weight:600;color:#D4AF37">'+a.iata+'</span>',{permanent:false,direction:"top",offset:[0,-8],className:"apt-tip"})
+      m.on("click",()=>{pickAirport(a.iata);closeSidebar()})
       markerMap[a.iata]=m
     })
-    updateMarkers()
-    map.on("zoomend",updateMarkers)
+    updateMarkers();map.on("zoomend",updateMarkers)
   }catch(e){console.warn("Airport load failed:",e)}
 }
 
 function updateMarkers(){
   const zoom=map.getZoom(),show=zoom>=SHOW_ZOOM
-  if(show&&!markersOnMap){Object.values(markerMap).forEach(m=>m.addTo(map));markersOnMap=true;setHint('Tap any &#9992; to set <span>ORIGIN</span> &nbsp;&#183;&nbsp; then <span>DESTINATION</span>')}
-  else if(!show&&markersOnMap){Object.values(markerMap).forEach(m=>map.removeLayer(m));markersOnMap=false;setHint('Zoom in to see airports &nbsp;&#183;&nbsp; <span>pinch to zoom</span>')}
+  if(show&&!markersOnMap){Object.values(markerMap).forEach(m=>m.addTo(map));markersOnMap=true;setHint('Tap any ✈ to set <span>ORIGIN</span> &nbsp;·&nbsp; then <span>DESTINATION</span>')}
+  else if(!show&&markersOnMap){Object.values(markerMap).forEach(m=>map.removeLayer(m));markersOnMap=false;setHint('Zoom in to see airports &nbsp;·&nbsp; <span>scroll or pinch to zoom</span>')}
   if(fromCode&&markerMap[fromCode])markerMap[fromCode].addTo(map)
   if(toCode&&markerMap[toCode])markerMap[toCode].addTo(map)
 }
 
-function stylePlane(code,cls){const m=markerMap[code];if(!m)return;const el=m.getElement();if(!el)return;const p=el.querySelector(".plane-icon");if(p)p.className="plane-icon "+cls}
+function stylePlane(code,cls){
+  const m=markerMap[code];if(!m)return
+  const el=m.getElement();if(!el)return
+  const p=el.querySelector(".plane-icon");if(p)p.className="plane-icon "+cls
+}
 
 function pickAirport(code){
-  if(!fromCode){fromCode=code;setChip("fromChip",code,false);stylePlane(code,"from");setHint('<span>'+code+'</span> set &nbsp;&#183;&nbsp; Now tap <span>DESTINATION</span>');return}
-  if(!toCode){if(code===fromCode)return;toCode=code;setChip("toChip",code,false);stylePlane(code,"to");setHint('Route: <span>'+fromCode+'</span> &#8594; <span>'+toCode+'</span> &nbsp;&#183;&nbsp; <span>Plan Mission</span>');return}
+  if(!fromCode){fromCode=code;setChip("fromChip",code,false);stylePlane(code,"from");setHint('<span>'+code+'</span> set as origin &nbsp;·&nbsp; Now tap <span>DESTINATION</span>');return}
+  if(!toCode){if(code===fromCode)return;toCode=code;setChip("toChip",code,false);stylePlane(code,"to");setHint('Route: <span>'+fromCode+'</span> → <span>'+toCode+'</span> &nbsp;·&nbsp; <span>Plan Mission</span>');return}
   resetAll();pickAirport(code)
 }
 
@@ -320,9 +797,10 @@ function resetAll(){
   if(fromCode)stylePlane(fromCode,"");if(toCode)stylePlane(toCode,"")
   fromCode=null;toCode=null
   setChip("fromChip","FROM",true);setChip("toChip","TO",true)
-  clearRoutes();setHint('Zoom in to see airports &nbsp;&#183;&nbsp; <span>pinch to zoom</span>')
+  clearRoutes();setHint('Zoom in to see airports &nbsp;·&nbsp; <span>scroll or pinch to zoom</span>')
 }
 
+// ── ROUTES ────────────────────────────────────────────────────────────
 function clearRoutes(){routeLines.forEach(l=>map.removeLayer(l));routeLines=[]}
 
 function drawRoute(routeStr){
@@ -332,14 +810,17 @@ function drawRoute(routeStr){
     const a1=airports[parts[i]],a2=airports[parts[i+1]]
     if(!a1||!a2)continue
     const coords=[[a1.lat,a1.lon],[a2.lat,a2.lon]]
-    routeLines.push(L.polyline(coords,{color:"#f5b01e",weight:10,opacity:0.07}).addTo(map))
-    routeLines.push(L.polyline(coords,{color:"#f5b01e",weight:2,opacity:0.9,dashArray:i>0?"7 5":null}).addTo(map))
+    routeLines.push(L.polyline(coords,{color:"#D4AF37",weight:10,opacity:0.06}).addTo(map))
+    routeLines.push(L.polyline(coords,{color:"#D4AF37",weight:1.8,opacity:0.85,dashArray:i>0?"7 5":null}).addTo(map))
   }
-  if(routeLines.length>0){try{const pts=parts.filter(c=>airports[c]).map(c=>[airports[c].lat,airports[c].lon]);map.fitBounds(L.latLngBounds(pts),{padding:[70,70]})}catch(e){}}
+  if(routeLines.length>0){
+    try{const pts=parts.filter(c=>airports[c]).map(c=>[airports[c].lat,airports[c].lon]);map.fitBounds(L.latLngBounds(pts),{padding:[80,80]})}catch(e){}
+  }
 }
 
+// ── MISSION ───────────────────────────────────────────────────────────
 async function runMission(){
-  if(!fromCode||!toCode){alert("Select origin and destination airports first.");return}
+  if(!fromCode||!toCode){alert("Please select origin and destination airports first.");return}
   setLoader(true)
   try{
     const pax=document.getElementById("pax").value
@@ -350,10 +831,10 @@ async function runMission(){
     renderCards(missionData)
     if(missionData.length>0)drawRoute(missionData[0].route)
     document.querySelectorAll(".pane").forEach(p=>p.classList.remove("active"))
-    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"))
+    document.querySelectorAll(".s-tab").forEach(t=>t.classList.remove("active"))
     document.getElementById("pane-results").classList.add("active")
-    document.querySelectorAll(".tab")[1].classList.add("active")
-    if(window.innerWidth<=768)document.getElementById("panel").classList.add("open")
+    document.querySelectorAll(".s-tab")[1].classList.add("active")
+    if(window.innerWidth<=768)document.getElementById("sidebar").classList.add("open")
   }catch(e){alert("Mission planning failed. Check your connection.")}
   finally{setLoader(false)}
 }
@@ -364,19 +845,20 @@ function renderCards(jets){
   empty.style.display="none";hint.style.display=jets.length>1?"block":"none"
   swiper.innerHTML=jets.map((j,i)=>{
     const imgHtml=j.imageUrl
-      ?'<img src="'+j.imageUrl+'" alt="'+j.aircraft+'" onerror="this.style.display=\'none\'">'
-      :'<div class="jet-img-ph">&#9992;</div>'
+      ?'<img src="'+j.imageUrl+'" alt="'+j.aircraft+'" onerror="this.parentElement.innerHTML=\'<div class=jet-img-ph>✈</div>\'">'
+      :'<div class="jet-img-ph">✈</div>'
     return '<div class="jet-card'+(i===0?' active':'')+'" id="jc-'+i+'" onclick="selectJet('+i+')">'
-      +'<div class="jet-img">'+imgHtml+'</div>'
-      +'<div class="jet-body">'
-      +'<div class="jet-name">'+j.aircraft+'</div>'
-      +'<div class="jet-grid">'
-      +'<div class="stat"><div class="stat-lbl">Distance</div><div class="stat-val">'+j.distanceNM+' <small style="color:var(--muted);font-size:9px">nm</small></div></div>'
-      +'<div class="stat"><div class="stat-lbl">Flight Time</div><div class="stat-val">'+j.flightTimeHours+' <small style="color:var(--muted);font-size:9px">hrs</small></div></div>'
-      +'<div class="stat"><div class="stat-lbl">Fuel Used</div><div class="stat-val">'+Number(j.fuelUsedGallons).toLocaleString()+' <small style="color:var(--muted);font-size:9px">gal</small></div></div>'
-      +'<div class="stat"><div class="stat-lbl">Trip Fuel Cost</div><div class="stat-val gold">$'+Number(j.fuelCostUSD).toLocaleString()+'</div></div>'
+      +'<div class="jet-img">'+imgHtml
+      +'<div class="jet-img-overlay"><div class="jet-img-name">'+j.aircraft+'</div></div>'
       +'</div>'
-      +'<span class="'+(j.fuelStop?'badge-stop':'badge-ok')+'">'+(j.fuelStop?'Fuel stop: '+j.fuelStop:'Non-stop')+'</span>'
+      +'<div class="jet-body">'
+      +'<div class="jet-grid">'
+      +'<div class="stat"><div class="stat-lbl">Distance</div><div class="stat-val">'+j.distanceNM+' <small style="font-size:9px;font-weight:400;color:var(--text2)">nm</small></div></div>'
+      +'<div class="stat"><div class="stat-lbl">Flight Time</div><div class="stat-val">'+j.flightTimeHours+' <small style="font-size:9px;font-weight:400;color:var(--text2)">hrs</small></div></div>'
+      +'<div class="stat"><div class="stat-lbl">Fuel Used</div><div class="stat-val">'+Number(j.fuelUsedGallons).toLocaleString()+' <small style="font-size:9px;font-weight:400;color:var(--text2)">gal</small></div></div>'
+      +'<div class="stat"><div class="stat-lbl">Trip Cost</div><div class="stat-val gold">$'+Number(j.fuelCostUSD).toLocaleString()+'</div></div>'
+      +'</div>'
+      +'<span class="badge '+(j.fuelStop?'badge-stop':'badge-ok')+'">'+(j.fuelStop?'⛽ Stop: '+j.fuelStop:'✓ Non-stop')+'</span>'
       +'</div></div>'
   }).join("")
 }
@@ -387,6 +869,7 @@ function selectJet(i){
   if(missionData[i])drawRoute(missionData[i].route)
 }
 
+// ── COSTS ─────────────────────────────────────────────────────────────
 function calcCosts(){
   const h=+document.getElementById("hours").value,cr=+document.getElementById("charterRate").value
   const fp=+document.getElementById("fuelPrice").value,crew=+document.getElementById("crewCost").value
@@ -395,16 +878,17 @@ function calcCosts(){
   const charter=h*cr,ownership=crew+m+hg+ins+(h*400*fp)
   const winner=charter<ownership?"Charter":"Ownership",diff=Math.abs(charter-ownership)
   document.getElementById("costOut").innerHTML=
-    '<div style="margin-top:14px">'
+    '<div style="margin-top:16px">'
     +'<div class="cost-row"><span class="cost-lbl">Charter / year</span><span class="cost-val">$'+charter.toLocaleString()+'</span></div>'
     +'<div class="cost-row"><span class="cost-lbl">Ownership / year</span><span class="cost-val">$'+ownership.toLocaleString()+'</span></div>'
     +'<div class="cost-row"><span class="cost-lbl">Charter over 5 years</span><span class="cost-val gold">$'+(charter*5).toLocaleString()+'</span></div>'
     +'<div class="cost-row"><span class="cost-lbl">Ownership over 5 years</span><span class="cost-val gold">$'+(ownership*5).toLocaleString()+'</span></div>'
     +'</div>'
-    +'<div class="verdict-box"><div class="vhead">Recommendation at '+h+' hrs/year</div>'
-    +'<div class="vtext">'+winner+' is cheaper by $'+diff.toLocaleString()+' per year</div></div>'
+    +'<div class="verdict-card"><div class="verdict-label">Recommendation at '+h+' hrs / year</div>'
+    +'<div class="verdict-text">'+winner+' is more cost-effective<br>saving $'+diff.toLocaleString()+' per year</div></div>'
 }
 
+// ── SAVE CLIENT ────────────────────────────────────────────────────────
 async function saveClient(){
   const name=document.getElementById("cName").value.trim()
   if(!name){alert("Full name is required.");return}
@@ -419,6 +903,7 @@ async function saveClient(){
   }catch(e){alert("Failed to save client.")}
 }
 
+// ── SERVICE WORKER ────────────────────────────────────────────────────
 if("serviceWorker" in navigator)navigator.serviceWorker.register("/sw.js").catch(()=>{})
 </script>
 </body>
